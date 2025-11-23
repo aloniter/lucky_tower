@@ -155,12 +155,12 @@
                 this.gltfLoader = new THREE.GLTFLoader();
                 this.textureLoader = new THREE.TextureLoader();
                 
-                // Background Sphere
-                const bgGeo = new THREE.SphereGeometry(80, 32, 32);
-                // Use MeshBasicMaterial with white color to show texture true colors
+                // Background Sphere - INCREASED SIZE & DISABLED FOG
+                const bgGeo = new THREE.SphereGeometry(600, 32, 32);
                 const bgMat = new THREE.MeshBasicMaterial({ 
                     side: THREE.BackSide,
-                    color: 0xffffff 
+                    color: 0xffffff,
+                    fog: false // Crucial: Prevents fog from turning the sky blue
                 });
                 this.backgroundMesh = new THREE.Mesh(bgGeo, bgMat);
                 this.scene.add(this.backgroundMesh);
@@ -177,7 +177,6 @@
             }
 
             loadBackgrounds() {
-                // Ensure these files exist in your directory
                 const levels = ['bg_1.png', 'bg_2.png', 'bg_3.png'];
                 const keys = ['level1', 'level2', 'level3'];
                 
@@ -188,10 +187,11 @@
                             console.log(`Loaded background: ${url}`);
                             tex.encoding = THREE.sRGBEncoding; 
                             this.backgrounds[keys[index]] = tex;
-                            // Force update if this is the first level
+                            
+                            // Force update if this is the first level and current map is null/default
+                            // We check the logic in updateBackground mostly, but initial load helper:
                             if(index === 0) {
-                                this.backgroundMesh.material.map = tex;
-                                this.backgroundMesh.material.needsUpdate = true;
+                                this.updateBackground(1);
                             }
                         },
                         undefined,
@@ -233,6 +233,12 @@
             animate(time) {
                 requestAnimationFrame(this.animate);
                 TWEEN.update(time);
+                
+                // Keep the background centered on the camera so we never go "outside" the sky
+                if (this.backgroundMesh) {
+                    this.backgroundMesh.position.copy(this.camera.position);
+                }
+                
                 this.renderer.render(this.scene, this.camera);
             }
 
