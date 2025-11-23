@@ -143,10 +143,14 @@
             cameraOffset: { x: 0, y: 5, z: 16 },
             animationSpeed: 500,
             // Platform & Player Depth (Positive Z is closer to camera)
-            // Tower is Radius 4.5. Setting this to 7.0 ensures we are safe from clipping.
             zIndex: 7.0,
-            // Offset to put feet on TOP of platform (Platform height 0.5 / 2 = 0.25)
-            platformTopOffset: 0.25
+            // Offset to put feet on TOP of platform
+            platformTopOffset: 0.25,
+            // ROTATION FIX: 
+            // Math.PI / 2 = 90 degrees (Turn Right)
+            // -Math.PI / 2 = -90 degrees (Turn Left)
+            // Math.PI = 180 degrees (Turn Around)
+            playerRotation: Math.PI / 2
         };
 
         // --- Three.js Engine Class ---
@@ -224,34 +228,25 @@
 
             // --- Auto-Fixer for 3D Models ---
             fitModelToSize(model, targetHeight) {
-                // 1. Reset transforms to ensure calculation is clean
                 model.updateWorldMatrix(true, true);
                 
-                // 2. Calculate box
                 const box = new THREE.Box3().setFromObject(model);
                 const size = box.getSize(new THREE.Vector3());
                 
-                // 3. Scale
                 let scaleFactor = 1;
                 if (size.y > 0) {
                     scaleFactor = targetHeight / size.y;
                 }
                 model.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 
-                // 4. Recalculate box after scale to get correct centering offsets
                 model.updateWorldMatrix(true, true);
                 const scaledBox = new THREE.Box3().setFromObject(model);
                 const center = scaledBox.getCenter(new THREE.Vector3());
                 const bottomY = scaledBox.min.y;
 
-                // 5. Create Wrapper
                 const wrapper = new THREE.Group();
                 wrapper.add(model);
 
-                // 6. Reposition Model inside Wrapper so:
-                // - Feet are at Y=0
-                // - X and Z centers are at 0
-                // Note: We use the negated center coordinates because we are moving the model relative to the wrapper origin
                 model.position.x = -center.x;
                 model.position.y = -bottomY;
                 model.position.z = -center.z;
@@ -303,7 +298,6 @@
             }
 
             loadPlayerModel() {
-                // Create backup first (Orange Sprite)
                 this.player = this.createProceduralPlayer();
                 this.scene.add(this.player);
 
@@ -315,20 +309,15 @@
                             
                             if(this.player) this.scene.remove(this.player);
 
-                            // Run Auto-Fixer to normalize size and centering
-                            // Returns a wrapper group with feet at (0,0,0) local
                             const fixedModel = this.fitModelToSize(gltf.scene, 2.5);
                             
                             this.player = fixedModel;
                             
-                            // Position the wrapper:
-                            // X: -1.5 (Left side)
-                            // Y: platformTopOffset (On top of the 0.5 height platform)
-                            // Z: zIndex (7.0, nicely in front of the tower)
+                            // Position: Left of center, On top of platform, In front of tower
                             this.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex); 
                             
-                            // ROTATION: Face the camera (Standard GLB faces -Z, Camera is at +Z)
-                            this.player.rotation.y = Math.PI; 
+                            // ROTATION FIX
+                            this.player.rotation.y = SETTINGS.playerRotation; 
 
                             this.player.traverse((node) => {
                                 if (node.isMesh) {
@@ -359,7 +348,6 @@
                 const geo = new THREE.BoxGeometry(3.5, 0.5, 3.5);
                 const mat = new THREE.MeshStandardMaterial({ color: 0x555555 });
                 const platform = new THREE.Mesh(geo, mat);
-                // Position platform at safe Z index (7.0)
                 platform.position.set(0, level * SETTINGS.floorHeight, SETTINGS.zIndex);
                 platform.castShadow = true;
                 platform.receiveShadow = true;
@@ -387,7 +375,6 @@
             }
 
             playerJumpTo(floorIndex) {
-                // Target Y is Floor Height + Offset
                 const endY = (floorIndex * SETTINGS.floorHeight) + SETTINGS.platformTopOffset; 
                 
                 new TWEEN.Tween(this.player.position)
@@ -395,7 +382,6 @@
                     .easing(TWEEN.Easing.Quadratic.Out)
                     .start();
 
-                // Squash/Stretch effect on the wrapper
                 new TWEEN.Tween(this.player.scale)
                     .to({ y: 0.8, x: 1.2, z: 1.2 }, SETTINGS.animationSpeed * 0.5)
                     .yoyo(true)
@@ -423,194 +409,6 @@
                     if(this.cardGroup.children[i].position.y < keepHeight) {
                         this.cardGroup.remove(this.cardGroup.children[i]);
                     }
-                }
-            }
-        }
-
-        // --- Game Logic ---
-        class GameLogic {
-            constructor(engine) {
-                this.engine = engine;
-                this.deck = [];
-                this.currentCard = null;
-                this.nextCard = null;
-                this.floor = 1;
-                this.score = 0;
-                
-                this.currentCardMesh = null;
-                this.nextCardMesh = null;
-
-                this.initGame();
-            }
-
-            initGame() {
-                this.floor = 1;
-                this.score = 0;
-                this.updateUI();
-                
-                this.generateDeck();
-                this.currentCard = this.drawCard();
-                this.nextCard = this.drawCard();
-
-                if(this.engine.player) {
-                    // Reset position: -1.5 X, Floor 0 + Offset Y, Z-Index 7.0
-                    this.engine.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex);
-                }
-                this.engine.camera.position.y = SETTINGS.cameraOffset.y;
-                this.engine.cardGroup.clear();
-
-                this.currentCardMesh = this.engine.spawnCard(this.currentCard, true, 0);
-                this.nextCardMesh = this.engine.spawnCard(this.nextCard, false, 0);
-
-                this.updateCardUI();
-                this.setPhase('guess');
-            }
-
-            generateDeck() {
-                const suits = [
-                    { s: '♥', c: '#ef4444' }, 
-                    { s: '♦', c: '#ef4444' }, 
-                    { s: '♣', c: '#111827' }, 
-                    { s: '♠', c: '#111827' }
-                ];
-                const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-                this.deck = [];
-                for(let d=0; d<5; d++) {
-                    for (const suit of suits) {
-                        for (let i = 0; i < ranks.length; i++) {
-                            this.deck.push({
-                                rank: ranks[i],
-                                value: i + 2,
-                                suitIcon: suit.s,
-                                color: suit.c
-                            });
-                        }
-                    }
-                }
-                for (let i = this.deck.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
-                }
-            }
-
-            drawCard() {
-                if(this.deck.length === 0) this.generateDeck();
-                return this.deck.pop();
-            }
-
-            async playerGuess(choice) {
-                this.setPhase('locked');
-                await this.engine.flipCard(this.nextCardMesh);
-                this.updateCardUI(true); 
-
-                const currentVal = this.currentCard.value;
-                const nextVal = this.nextCard.value;
-                let won = false;
-
-                if (choice === 'higher' && nextVal >= currentVal) won = true;
-                else if (choice === 'lower' && nextVal <= currentVal) won = true;
-
-                if (won) {
-                    setTimeout(() => this.handleWin(), 300);
-                } else {
-                    setTimeout(() => this.handleLoss(), 500);
-                }
-            }
-
-            handleWin() {
-                this.showMessage("CORRECT!", false);
-                this.score += 100 * this.floor;
-                this.floor++;
-                
-                this.engine.playerJumpTo(this.floor - 1);
-                this.engine.moveCameraToFloor(this.floor - 1);
-                
-                this.updateUI();
-                setTimeout(() => {
-                    this.setupNextRound();
-                }, SETTINGS.animationSpeed + 100);
-            }
-
-            handleLoss() {
-                this.showMessage("FAILED!", true);
-                this.setPhase('gameover');
-            }
-
-            setupNextRound() {
-                this.currentCard = this.nextCard;
-                if (this.nextCardMesh) {
-                    this.engine.cardGroup.remove(this.nextCardMesh);
-                    this.nextCardMesh = null;
-                }
-                
-                this.nextCard = this.drawCard();
-                const floorIdx = this.floor - 1;
-                
-                this.nextCardMesh = this.engine.spawnCard(this.nextCard, false, floorIdx);
-                this.engine.clearOldCards(this.floor);
-                
-                this.updateCardUI(false); 
-                this.setPhase('guess');
-            }
-            
-            resetGame() {
-                this.initGame();
-            }
-
-            updateCardUI(revealNext = false) {
-                const c = this.currentCard;
-                const cEl = document.getElementById('ui-card-current');
-                cEl.className = `card-ui transform -rotate-6 ${c.color === '#ef4444' ? 'red' : 'black'}`;
-                cEl.innerHTML = `
-                    <div class="text-xl">${c.rank}</div>
-                    <div class="text-3xl text-center">${c.suitIcon}</div>
-                    <div class="text-xl self-end rotate-180">${c.rank}</div>
-                `;
-
-                const nEl = document.getElementById('ui-card-next');
-                if (revealNext) {
-                    const n = this.nextCard;
-                    nEl.className = `card-ui transform rotate-6 ${n.color === '#ef4444' ? 'red' : 'black'}`;
-                    nEl.innerHTML = `
-                        <div class="text-xl">${n.rank}</div>
-                        <div class="text-3xl text-center">${n.suitIcon}</div>
-                        <div class="text-xl self-end rotate-180">${n.rank}</div>
-                    `;
-                } else {
-                    nEl.className = 'card-ui back transform rotate-6';
-                    nEl.innerHTML = '?';
-                }
-            }
-
-            showMessage(text, isBad = false) {
-                const el = document.getElementById('game-message');
-                el.innerText = text;
-                el.style.color = isBad ? '#ff4444' : '#4ade80';
-                el.style.opacity = 1;
-                el.style.transform = 'scale(1)';
-                setTimeout(() => {
-                    el.style.opacity = 0;
-                    el.style.transform = 'scale(0.5)';
-                }, 1000);
-            }
-
-            updateUI() {
-                document.getElementById('floor-display').innerText = this.floor;
-                document.getElementById('score-display').innerText = this.score;
-                document.getElementById('final-floor').innerText = this.floor;
-            }
-
-            setPhase(phase) {
-                const guessControls = document.getElementById('controls-guess');
-                const resetControls = document.getElementById('controls-reset');
-
-                guessControls.classList.add('hidden');
-                resetControls.classList.add('hidden');
-
-                if (phase === 'guess') {
-                    guessControls.classList.remove('hidden');
-                } else if (phase === 'gameover') {
-                    resetControls.classList.remove('hidden');
                 }
             }
         }
