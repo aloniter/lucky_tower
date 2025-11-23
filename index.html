@@ -144,7 +144,6 @@
             animationSpeed: 500,
             zIndex: 7.0,
             platformTopOffset: 0.25,
-            // ROTATION FIX: -90 degrees to face left/camera depending on model origin
             playerRotation: -Math.PI / 2
         };
 
@@ -179,10 +178,52 @@
 
                 this.player = null;
                 this.gltfLoader = new THREE.GLTFLoader();
+                this.textureLoader = new THREE.TextureLoader();
+                
+                // Background Sphere
+                const bgGeo = new THREE.SphereGeometry(60, 32, 32);
+                const bgMat = new THREE.MeshBasicMaterial({ side: THREE.BackSide });
+                this.backgroundMesh = new THREE.Mesh(bgGeo, bgMat);
+                this.scene.add(this.backgroundMesh);
+                
+                // Background Textures
+                this.backgrounds = {
+                    level1: null,
+                    level2: null,
+                    level3: null
+                };
 
                 window.addEventListener('resize', () => this.onResize());
                 this.animate = this.animate.bind(this);
                 requestAnimationFrame(this.animate);
+            }
+
+            loadBackgrounds() {
+                // Preload textures
+                const levels = ['bg_1.png', 'bg_2.png', 'bg_3.png'];
+                const keys = ['level1', 'level2', 'level3'];
+                
+                levels.forEach((url, index) => {
+                    this.textureLoader.load(url, (tex) => {
+                        this.backgrounds[keys[index]] = tex;
+                        if(index === 0) this.updateBackground(1); // Set initial
+                    });
+                });
+            }
+
+            updateBackground(floor) {
+                let tex = this.backgrounds.level1;
+                
+                if (floor >= 7) {
+                    tex = this.backgrounds.level3;
+                } else if (floor >= 4) {
+                    tex = this.backgrounds.level2;
+                }
+
+                if (tex && this.backgroundMesh.material.map !== tex) {
+                    this.backgroundMesh.material.map = tex;
+                    this.backgroundMesh.material.needsUpdate = true;
+                }
             }
 
             onResize() {
@@ -206,6 +247,7 @@
                 this.towerGroup.add(tower);
 
                 this.loadPlayerModel();
+                this.loadBackgrounds();
 
                 for(let i=0; i<50; i++) {
                     this.addPlatform(i);
@@ -408,8 +450,6 @@
             }
 
             initGame() {
-                // If this is a reset, we might want to keep score/floor?
-                // For now, initGame behaves as a fresh start unless modified
                 this.floor = 1;
                 this.score = 0;
                 this.updateUI();
@@ -423,6 +463,7 @@
                 }
                 this.engine.camera.position.y = SETTINGS.cameraOffset.y;
                 this.engine.cardGroup.clear();
+                this.engine.updateBackground(1);
 
                 this.currentCardMesh = this.engine.spawnCard(this.currentCard, true, 0);
                 this.nextCardMesh = this.engine.spawnCard(this.nextCard, false, 0);
@@ -431,17 +472,8 @@
                 this.setPhase('guess');
             }
 
-            // New Method: Retry the current floor without resetting everything
             retryFloor() {
-                // We keep this.floor and this.score as is
-                // Just deal new cards for this specific attempt
                 this.nextCard = this.drawCard();
-                // Ensure we have a valid current card (or redraw it too)
-                // Usually current card is fine, we just failed to guess the next one.
-                // But to be fair, maybe shuffle next card back in? 
-                // Simple version: Just set up the round again visually.
-                
-                // Visual Reset for the cards
                 this.currentCardMesh = this.engine.spawnCard(this.currentCard, true, this.floor - 1);
                 this.nextCardMesh = this.engine.spawnCard(this.nextCard, false, this.floor - 1);
                 
@@ -508,6 +540,7 @@
                 
                 this.engine.playerJumpTo(this.floor - 1);
                 this.engine.moveCameraToFloor(this.floor - 1);
+                this.engine.updateBackground(this.floor);
                 
                 this.updateUI();
                 setTimeout(() => {
@@ -517,7 +550,6 @@
 
             handleLoss() {
                 this.showMessage("TRY AGAIN!", true);
-                // Don't fall, just show the try again screen
                 this.setPhase('gameover');
             }
 
@@ -538,13 +570,9 @@
                 this.setPhase('guess');
             }
             
-            // Modified reset to just continue
             continueGame() {
-                // Just set up a new round on the current floor
-                // We need to generate a new "Next" card to guess against
                 this.nextCard = this.drawCard();
                 
-                // Re-create the visual cards for this floor
                 if (this.nextCardMesh) {
                     this.engine.cardGroup.remove(this.nextCardMesh);
                     this.nextCardMesh = null;
@@ -595,7 +623,6 @@
             updateUI() {
                 document.getElementById('floor-display').innerText = this.floor;
                 document.getElementById('score-display').innerText = this.score;
-                // Removed the line trying to update final-floor since the element was removed
             }
 
             setPhase(phase) {
@@ -628,7 +655,6 @@
                 window.game.playerGuess('lower');
             });
 
-            // Updated to call continueGame instead of resetGame (initGame)
             document.getElementById('btn-reset').addEventListener('click', () => {
                 window.game.continueGame();
             });
