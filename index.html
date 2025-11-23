@@ -135,7 +135,7 @@
                 this.renderer = new THREE.WebGLRenderer({ antialias: true });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.shadowMap.enabled = true;
-                this.renderer.outputEncoding = THREE.sRGBEncoding; // Important for textures
+                this.renderer.outputEncoding = THREE.sRGBEncoding; 
                 document.getElementById('canvas-container').appendChild(this.renderer.domElement);
 
                 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
@@ -185,7 +185,7 @@
                         url, 
                         (tex) => {
                             console.log(`Loaded background: ${url}`);
-                            tex.encoding = THREE.sRGBEncoding; // Ensure correct color space
+                            tex.encoding = THREE.sRGBEncoding; 
                             this.backgrounds[keys[index]] = tex;
                             // Force update if this is the first level
                             if(index === 0) {
