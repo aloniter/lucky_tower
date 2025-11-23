@@ -142,7 +142,11 @@
             floorHeight: 6, 
             cameraOffset: { x: 0, y: 5, z: 16 },
             animationSpeed: 500,
-            zIndex: 5.5 // New constant to ensure player/platforms are in front of tower
+            // Platform & Player Depth (Positive Z is closer to camera)
+            // Tower is Radius 4.5. We need to be well in front of it.
+            zIndex: 6.5,
+            // Offset to put feet on TOP of platform (Platform height 0.5 / 2 = 0.25)
+            platformTopOffset: 0.25
         };
 
         // --- Three.js Engine Class ---
@@ -167,7 +171,7 @@
                 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
                 this.scene.add(ambientLight);
 
-                const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
                 dirLight.position.set(5, 10, 7);
                 dirLight.castShadow = true;
                 this.scene.add(dirLight);
@@ -202,7 +206,6 @@
 
             initWorld() {
                 // 1. Tower (Simple Cylinder)
-                // Radius 4.5
                 const towerGeo = new THREE.CylinderGeometry(4.5, 4.5, 300, 32);
                 const towerMat = new THREE.MeshStandardMaterial({ color: 0x888888, flatShading: true });
                 const tower = new THREE.Mesh(towerGeo, towerMat);
@@ -219,43 +222,53 @@
                 }
             }
 
-            // --- Procedural Character Generator ---
+            // --- Auto-Fixer for 3D Models ---
+            fitModelToSize(model, targetHeight) {
+                const box = new THREE.Box3().setFromObject(model);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+
+                // 1. Center the model at 0,0,0 based on its bounding box
+                model.position.x -= center.x;
+                model.position.y -= box.min.y; // This puts the feet at Y=0 locally
+                model.position.z -= center.z;
+
+                // 2. Scale the model
+                if (size.y > 0) {
+                    const scaleFactor = targetHeight / size.y;
+                    model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                }
+
+                // 3. Wrapper to hold offset
+                const wrapper = new THREE.Group();
+                wrapper.add(model);
+                return wrapper;
+            }
+
+            // --- Procedural Character Generator (Backup) ---
             generatePlayerTexture() {
                 const canvas = document.createElement('canvas');
                 canvas.width = 256;
                 canvas.height = 256;
                 const ctx = canvas.getContext('2d');
-
-                // Clear
                 ctx.clearRect(0, 0, 256, 256);
-
-                // Body (Orange Capsule)
-                ctx.fillStyle = '#ff8c00'; // Dark Orange
+                // Body
+                ctx.fillStyle = '#ff8c00';
                 ctx.beginPath();
                 ctx.roundRect(64, 32, 128, 192, 60);
                 ctx.fill();
-                
-                // Shadow/Highlight
-                ctx.fillStyle = 'rgba(255,255,255,0.2)';
-                ctx.beginPath();
-                ctx.ellipse(100, 80, 30, 20, -0.5, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Sunglasses (Black)
+                // Glasses
                 ctx.fillStyle = '#111';
                 ctx.beginPath();
-                ctx.roundRect(74, 80, 45, 30, 10); // Left Lens
-                ctx.roundRect(137, 80, 45, 30, 10); // Right Lens
+                ctx.roundRect(74, 80, 45, 30, 10);
+                ctx.roundRect(137, 80, 45, 30, 10);
                 ctx.fill();
-                
-                // Bridge of glasses
                 ctx.strokeStyle = '#111';
                 ctx.lineWidth = 8;
                 ctx.beginPath();
                 ctx.moveTo(119, 95);
                 ctx.lineTo(137, 95);
                 ctx.stroke();
-
                 // Smile
                 ctx.strokeStyle = '#333';
                 ctx.lineWidth = 8;
@@ -263,7 +276,6 @@
                 ctx.beginPath();
                 ctx.arc(128, 150, 30, 0.2, Math.PI - 0.2);
                 ctx.stroke();
-
                 return new THREE.CanvasTexture(canvas);
             }
 
@@ -272,9 +284,8 @@
                 const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
                 const geo = new THREE.PlaneGeometry(2.5, 2.5);
                 const mesh = new THREE.Mesh(geo, mat);
-                // Updated Z Position to be in front of tower (Radius 4.5)
-                mesh.position.set(-1.5, 1.5, SETTINGS.zIndex); 
-                
+                // Set initial position
+                mesh.position.set(-1.5, 1.5 + SETTINGS.platformTopOffset, SETTINGS.zIndex); 
                 mesh.onBeforeRender = (renderer, scene, camera) => {
                     mesh.quaternion.copy(camera.quaternion);
                 };
@@ -282,6 +293,7 @@
             }
 
             loadPlayerModel() {
+                // Create backup first
                 this.player = this.createProceduralPlayer();
                 this.scene.add(this.player);
 
@@ -293,11 +305,23 @@
                             
                             if(this.player) this.scene.remove(this.player);
 
-                            this.player = gltf.scene;
-                            // Updated Z Position to be in front of tower
-                            this.player.position.set(-1.5, 0.5, SETTINGS.zIndex); 
-                            this.player.scale.set(1.5, 1.5, 1.5);
+                            // Run Auto-Fixer to normalize size and centering
+                            const fixedModel = this.fitModelToSize(gltf.scene, 2.5);
                             
+                            this.player = fixedModel;
+                            
+                            // Position: 
+                            // X: -1.5 (Slightly left)
+                            // Y: 0 + Offset (Stand ON TOP of platform)
+                            // Z: 6.5 (In front of tower)
+                            this.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex); 
+                            
+                            // ROTATION FIX: Turn 180 degrees to face camera
+                            // Default GLB usually faces -Z, we want it to face +Z (Camera is at +16)
+                            this.player.rotation.y = Math.PI; 
+                            // Add slight angle if you want it 'cool'
+                            // this.player.rotation.y = Math.PI - 0.2; 
+
                             this.player.traverse((node) => {
                                 if (node.isMesh) {
                                     node.castShadow = true;
@@ -312,7 +336,9 @@
                         (error) => {
                             console.warn("GLB load failed (Using Sprite Fallback):", error);
                             if (window.location.protocol === 'file:') {
-                                document.getElementById('debug-area').innerHTML = "⚠️ Using 2D Sprite Fallback (Browser blocked 3D file)";
+                                document.getElementById('debug-area').innerHTML = "⚠️ Using Backup Sprite.<br>Reason: Browser blocked 3D file.<br>Solution: Use a Local Server.";
+                            } else {
+                                document.getElementById('debug-area').innerHTML = "⚠️ Using Backup Sprite.<br>Reason: character.glb not found.";
                             }
                         }
                     );
@@ -325,7 +351,7 @@
                 const geo = new THREE.BoxGeometry(3.5, 0.5, 3.5);
                 const mat = new THREE.MeshStandardMaterial({ color: 0x555555 });
                 const platform = new THREE.Mesh(geo, mat);
-                // Updated Z Position to 5.5 (was 4) to stick out of the 4.5 radius tower
+                // Position platform
                 platform.position.set(0, level * SETTINGS.floorHeight, SETTINGS.zIndex);
                 platform.castShadow = true;
                 platform.receiveShadow = true;
@@ -353,16 +379,17 @@
             }
 
             playerJumpTo(floorIndex) {
-                const is3D = this.player.type === 'Group' || this.player.type === 'Scene';
-                const endY = (floorIndex * SETTINGS.floorHeight) + (is3D ? 0.5 : 1.5); 
+                // Ensure target includes offset so we land ON the platform
+                const endY = (floorIndex * SETTINGS.floorHeight) + SETTINGS.platformTopOffset; 
                 
                 new TWEEN.Tween(this.player.position)
                     .to({ y: endY }, SETTINGS.animationSpeed)
                     .easing(TWEEN.Easing.Quadratic.Out)
                     .start();
 
+                // Squash/Stretch effect
                 new TWEEN.Tween(this.player.scale)
-                    .to({ y: 1.2, x: 1.8, z: 1.8 }, SETTINGS.animationSpeed * 0.5)
+                    .to({ y: 0.8, x: 1.2, z: 1.2 }, SETTINGS.animationSpeed * 0.5)
                     .yoyo(true)
                     .repeat(1)
                     .start();
@@ -418,9 +445,8 @@
                 this.nextCard = this.drawCard();
 
                 if(this.engine.player) {
-                    const is3D = this.engine.player.type === 'Group' || this.engine.player.type === 'Scene';
-                    // Reset to correct Z depth (5.5)
-                    this.engine.player.position.set(-1.5, is3D ? 0.5 : 1.5, SETTINGS.zIndex); 
+                    // Reset position: -1.5 X, Floor 0 + Offset Y, Z-Index 6.5
+                    this.engine.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex);
                 }
                 this.engine.camera.position.y = SETTINGS.cameraOffset.y;
                 this.engine.cardGroup.clear();
