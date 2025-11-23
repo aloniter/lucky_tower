@@ -12,11 +12,8 @@
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; font-family: 'Poppins', sans-serif; user-select: none; }
         #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
-        
-        /* Interactive UI Elements - Critical for buttons to work */
         .interactive { pointer-events: auto; }
 
-        /* Card UI Styles */
         .card-ui {
             width: 80px;
             height: 112px;
@@ -41,39 +38,30 @@
             font-size: 2rem;
         }
         
-        /* Gradients */
         .bg-glass {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
         .text-shadow { text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
     </style>
 
-    <!-- Three.js, Tween.js, and GLTFLoader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
 </head>
 <body>
 
-    <!-- 3D Container -->
     <div id="canvas-container"></div>
 
-    <!-- UI Overlay -->
     <div id="ui-layer" class="flex flex-col justify-between p-4">
-        
-        <!-- Debug/Warning Area -->
         <div id="debug-area" class="absolute top-0 left-0 p-2 text-xs text-red-400 font-mono z-50 max-w-sm pointer-events-none"></div>
 
-        <!-- Header / Stats -->
         <div class="flex justify-between items-start interactive">
             <div class="bg-glass p-3 rounded-xl shadow-lg text-white min-w-[120px]">
                 <div class="text-xs opacity-70 uppercase tracking-wider">Floor</div>
                 <div class="text-3xl font-bold text-yellow-400" id="floor-display">1</div>
             </div>
-
             <div class="bg-glass p-3 rounded-xl shadow-lg text-white text-right min-w-[150px]">
                 <div class="text-xs opacity-70 uppercase tracking-wider">Score</div>
                 <div class="text-2xl font-bold text-green-400 flex items-center justify-end gap-2">
@@ -82,16 +70,13 @@
             </div>
         </div>
 
-        <!-- Center Message Area -->
         <div class="absolute top-1/4 left-0 w-full text-center pointer-events-none flex flex-col items-center justify-center z-20">
             <div id="game-message" class="text-4xl md:text-6xl font-black text-white text-shadow transform transition-all duration-300 opacity-0 scale-50">
                 LEVEL UP!
             </div>
         </div>
 
-        <!-- Card Overlay Area -->
         <div class="absolute top-1/2 left-0 w-full -translate-y-1/2 flex justify-between px-4 md:px-12 pointer-events-none z-0 opacity-90">
-            <!-- Left: Current Card -->
             <div class="flex flex-col items-center gap-2">
                 <div class="text-white text-sm font-bold bg-black/50 px-2 rounded">CURRENT</div>
                 <div id="ui-card-current" class="card-ui black transform -rotate-6">
@@ -100,20 +85,13 @@
                     <div class="text-xl self-end rotate-180">A</div>
                 </div>
             </div>
-
-            <!-- Right: Next Card -->
             <div class="flex flex-col items-center gap-2">
                 <div class="text-white text-sm font-bold bg-black/50 px-2 rounded">NEXT</div>
-                <div id="ui-card-next" class="card-ui back transform rotate-6">
-                    ?
-                </div>
+                <div id="ui-card-next" class="card-ui back transform rotate-6">?</div>
             </div>
         </div>
 
-        <!-- Footer / Controls -->
         <div class="w-full max-w-md mx-auto mb-6 relative interactive z-30">
-            
-            <!-- Phase 1: Guessing -->
             <div id="controls-guess" class="flex gap-4 justify-center transition-all duration-300">
                 <button id="btn-higher" class="flex-1 bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white font-bold py-4 rounded-2xl shadow-[0_4px_0_rgb(29,78,216)] active:shadow-none active:translate-y-1 transition-all transform hover:scale-105">
                     <div class="text-2xl">▲ HIGHER</div>
@@ -122,8 +100,6 @@
                     <div class="text-2xl">▼ LOWER</div>
                 </button>
             </div>
-
-            <!-- Phase 3: Try Again (No Game Over) -->
             <div id="controls-reset" class="hidden text-center">
                 <div class="bg-black/70 p-4 rounded-lg mb-4">
                     <h2 class="text-red-500 text-2xl font-bold">OOPS!</h2>
@@ -137,7 +113,6 @@
     </div>
 
     <script>
-        // --- Game Settings ---
         const SETTINGS = {
             floorHeight: 6, 
             cameraOffset: { x: 0, y: 5, z: 16 },
@@ -147,11 +122,9 @@
             playerRotation: -Math.PI / 2
         };
 
-        // --- Three.js Engine Class ---
         class GameEngine {
             constructor() {
                 this.scene = new THREE.Scene();
-                // Initial color fallback
                 this.scene.background = new THREE.Color(0x87CEEB);
                 this.scene.fog = new THREE.Fog(0x87CEEB, 10, 60);
 
@@ -162,9 +135,10 @@
                 this.renderer = new THREE.WebGLRenderer({ antialias: true });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.shadowMap.enabled = true;
+                this.renderer.outputEncoding = THREE.sRGBEncoding; // Important for textures
                 document.getElementById('canvas-container').appendChild(this.renderer.domElement);
 
-                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
                 this.scene.add(ambientLight);
 
                 const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -181,12 +155,12 @@
                 this.gltfLoader = new THREE.GLTFLoader();
                 this.textureLoader = new THREE.TextureLoader();
                 
-                // Background Sphere - Big enough to surround the scene
+                // Background Sphere
                 const bgGeo = new THREE.SphereGeometry(80, 32, 32);
-                // IMPORTANT: DoubleSide or BackSide to see it from inside
+                // Use MeshBasicMaterial with white color to show texture true colors
                 const bgMat = new THREE.MeshBasicMaterial({ 
                     side: THREE.BackSide,
-                    color: 0xffffff // Start white to show texture clearly
+                    color: 0xffffff 
                 });
                 this.backgroundMesh = new THREE.Mesh(bgGeo, bgMat);
                 this.scene.add(this.backgroundMesh);
@@ -211,9 +185,13 @@
                         url, 
                         (tex) => {
                             console.log(`Loaded background: ${url}`);
+                            tex.encoding = THREE.sRGBEncoding; // Ensure correct color space
                             this.backgrounds[keys[index]] = tex;
-                            // If this is level 1 and it just loaded, apply it immediately
-                            if(index === 0) this.updateBackground(1);
+                            // Force update if this is the first level
+                            if(index === 0) {
+                                this.backgroundMesh.material.map = tex;
+                                this.backgroundMesh.material.needsUpdate = true;
+                            }
                         },
                         undefined,
                         (err) => console.warn(`Failed to load ${url}:`, err)
@@ -224,21 +202,18 @@
             updateBackground(floor) {
                 let tex = this.backgrounds.level1;
                 
-                // Logic: 1-3 (L1), 4-6 (L2), 7+ (L3)
-                // Note: Floor starts at 1.
                 if (floor >= 7) {
                     tex = this.backgrounds.level3;
                 } else if (floor >= 4) {
                     tex = this.backgrounds.level2;
                 }
 
-                // Fallback to level1 if higher levels aren't loaded yet
-                if (!tex) tex = this.backgrounds.level1;
+                if (!tex) tex = this.backgrounds.level1; // Fallback
 
                 if (tex && this.backgroundMesh.material.map !== tex) {
                     this.backgroundMesh.material.map = tex;
                     this.backgroundMesh.material.needsUpdate = true;
-                    console.log("Background updated for floor", floor);
+                    console.log(`Background updated for floor ${floor}`);
                 }
             }
 
@@ -311,18 +286,6 @@
                 ctx.roundRect(74, 80, 45, 30, 10);
                 ctx.roundRect(137, 80, 45, 30, 10);
                 ctx.fill();
-                ctx.strokeStyle = '#111';
-                ctx.lineWidth = 8;
-                ctx.beginPath();
-                ctx.moveTo(119, 95);
-                ctx.lineTo(137, 95);
-                ctx.stroke();
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 8;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.arc(128, 150, 30, 0.2, Math.PI - 0.2);
-                ctx.stroke();
                 return new THREE.CanvasTexture(canvas);
             }
 
@@ -346,22 +309,11 @@
                     this.gltfLoader.load(
                         'character.glb',
                         (gltf) => {
-                            console.log("Model loaded successfully!");
-                            
                             if(this.player) this.scene.remove(this.player);
-
                             const fixedModel = this.fitModelToSize(gltf.scene, 2.5);
                             this.player = fixedModel;
                             this.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex); 
                             this.player.rotation.y = SETTINGS.playerRotation; 
-
-                            this.player.traverse((node) => {
-                                if (node.isMesh) {
-                                    node.castShadow = true;
-                                    node.receiveShadow = true;
-                                }
-                            });
-
                             this.scene.add(this.player);
                             document.getElementById('debug-area').innerText = ""; 
                         },
@@ -369,9 +321,7 @@
                         (error) => {
                             console.warn("GLB load failed:", error);
                             if (window.location.protocol === 'file:') {
-                                document.getElementById('debug-area').innerHTML = "⚠️ Using Backup Sprite.<br>Reason: Browser blocked 3D file.<br>Solution: Use a Local Server.";
-                            } else {
-                                document.getElementById('debug-area').innerHTML = "⚠️ Using Backup Sprite.<br>Reason: character.glb not found.";
+                                document.getElementById('debug-area').innerHTML = "⚠️ Using Backup Sprite (Browser Blocked 3D File)";
                             }
                         }
                     );
@@ -390,14 +340,6 @@
                 this.towerGroup.add(platform);
             }
 
-            createCardObject(colorHex) {
-                const geometry = new THREE.BoxGeometry(2.2, 3.2, 0.2);
-                const material = new THREE.MeshStandardMaterial({ color: colorHex });
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.castShadow = true;
-                return mesh;
-            }
-
             spawnCard(cardData, isCurrent, floorIndex) {
                 return null;
             }
@@ -412,12 +354,10 @@
 
             playerJumpTo(floorIndex) {
                 const endY = (floorIndex * SETTINGS.floorHeight) + SETTINGS.platformTopOffset; 
-                
                 new TWEEN.Tween(this.player.position)
                     .to({ y: endY }, SETTINGS.animationSpeed)
                     .easing(TWEEN.Easing.Quadratic.Out)
                     .start();
-
                 new TWEEN.Tween(this.player.scale)
                     .to({ y: 0.8, x: 1.2, z: 1.2 }, SETTINGS.animationSpeed * 0.5)
                     .yoyo(true)
@@ -427,10 +367,7 @@
 
             flipCard(cardMesh) {
                 return new Promise(resolve => {
-                    if (!cardMesh) {
-                        resolve();
-                        return;
-                    }
+                    if (!cardMesh) { resolve(); return; }
                     new TWEEN.Tween(cardMesh.rotation)
                         .to({ y: 0 }, 300)
                         .easing(TWEEN.Easing.Linear.None)
@@ -449,7 +386,6 @@
             }
         }
 
-        // --- Game Logic ---
         class GameLogic {
             constructor(engine) {
                 this.engine = engine;
@@ -458,10 +394,8 @@
                 this.nextCard = null;
                 this.floor = 1;
                 this.score = 0;
-                
                 this.currentCardMesh = null;
                 this.nextCardMesh = null;
-
                 this.initGame();
             }
 
@@ -469,7 +403,6 @@
                 this.floor = 1;
                 this.score = 0;
                 this.updateUI();
-                
                 this.generateDeck();
                 this.currentCard = this.drawCard();
                 this.nextCard = this.drawCard();
@@ -479,7 +412,12 @@
                 }
                 this.engine.camera.position.y = SETTINGS.cameraOffset.y;
                 this.engine.cardGroup.clear();
-                this.engine.updateBackground(1);
+                
+                // Set initial background explicitly
+                if(this.engine.backgrounds.level1) {
+                    this.engine.backgroundMesh.material.map = this.engine.backgrounds.level1;
+                    this.engine.backgroundMesh.material.needsUpdate = true;
+                }
 
                 this.currentCardMesh = this.engine.spawnCard(this.currentCard, true, 0);
                 this.nextCardMesh = this.engine.spawnCard(this.nextCard, false, 0);
@@ -492,17 +430,14 @@
                 this.nextCard = this.drawCard();
                 this.currentCardMesh = this.engine.spawnCard(this.currentCard, true, this.floor - 1);
                 this.nextCardMesh = this.engine.spawnCard(this.nextCard, false, this.floor - 1);
-                
                 this.updateCardUI();
                 this.setPhase('guess');
             }
 
             generateDeck() {
                 const suits = [
-                    { s: '♥', c: '#ef4444' }, 
-                    { s: '♦', c: '#ef4444' }, 
-                    { s: '♣', c: '#111827' }, 
-                    { s: '♠', c: '#111827' }
+                    { s: '♥', c: '#ef4444' }, { s: '♦', c: '#ef4444' }, 
+                    { s: '♣', c: '#111827' }, { s: '♠', c: '#111827' }
                 ];
                 const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
                 this.deck = [];
@@ -530,7 +465,6 @@
             }
 
             async playerGuess(choice) {
-                console.log('Player guessed:', choice);
                 this.setPhase('locked');
                 await this.engine.flipCard(this.nextCardMesh);
                 this.updateCardUI(true); 
@@ -575,26 +509,21 @@
                     this.engine.cardGroup.remove(this.nextCardMesh);
                     this.nextCardMesh = null;
                 }
-                
                 this.nextCard = this.drawCard();
                 const floorIdx = this.floor - 1;
-                
                 this.nextCardMesh = this.engine.spawnCard(this.nextCard, false, floorIdx);
                 this.engine.clearOldCards(this.floor);
-                
                 this.updateCardUI(false); 
                 this.setPhase('guess');
             }
             
             continueGame() {
                 this.nextCard = this.drawCard();
-                
                 if (this.nextCardMesh) {
                     this.engine.cardGroup.remove(this.nextCardMesh);
                     this.nextCardMesh = null;
                 }
                 this.nextCardMesh = this.engine.spawnCard(this.nextCard, false, this.floor - 1);
-                
                 this.updateCardUI(false);
                 this.setPhase('guess');
             }
@@ -603,21 +532,13 @@
                 const c = this.currentCard;
                 const cEl = document.getElementById('ui-card-current');
                 cEl.className = `card-ui transform -rotate-6 ${c.color === '#ef4444' ? 'red' : 'black'}`;
-                cEl.innerHTML = `
-                    <div class="text-xl">${c.rank}</div>
-                    <div class="text-3xl text-center">${c.suitIcon}</div>
-                    <div class="text-xl self-end rotate-180">${c.rank}</div>
-                `;
+                cEl.innerHTML = `<div class="text-xl">${c.rank}</div><div class="text-3xl text-center">${c.suitIcon}</div><div class="text-xl self-end rotate-180">${c.rank}</div>`;
 
                 const nEl = document.getElementById('ui-card-next');
                 if (revealNext) {
                     const n = this.nextCard;
                     nEl.className = `card-ui transform rotate-6 ${n.color === '#ef4444' ? 'red' : 'black'}`;
-                    nEl.innerHTML = `
-                        <div class="text-xl">${n.rank}</div>
-                        <div class="text-3xl text-center">${n.suitIcon}</div>
-                        <div class="text-xl self-end rotate-180">${n.rank}</div>
-                    `;
+                    nEl.innerHTML = `<div class="text-xl">${n.rank}</div><div class="text-3xl text-center">${n.suitIcon}</div><div class="text-xl self-end rotate-180">${n.rank}</div>`;
                 } else {
                     nEl.className = 'card-ui back transform rotate-6';
                     nEl.innerHTML = '?';
@@ -644,10 +565,8 @@
             setPhase(phase) {
                 const guessControls = document.getElementById('controls-guess');
                 const resetControls = document.getElementById('controls-reset');
-
                 guessControls.classList.add('hidden');
                 resetControls.classList.add('hidden');
-
                 if (phase === 'guess') {
                     guessControls.classList.remove('hidden');
                 } else if (phase === 'gameover') {
@@ -661,19 +580,9 @@
         window.game = new GameLogic(engine);
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('btn-higher').addEventListener('click', () => {
-                console.log('Higher clicked');
-                window.game.playerGuess('higher');
-            });
-            
-            document.getElementById('btn-lower').addEventListener('click', () => {
-                console.log('Lower clicked');
-                window.game.playerGuess('lower');
-            });
-
-            document.getElementById('btn-reset').addEventListener('click', () => {
-                window.game.continueGame();
-            });
+            document.getElementById('btn-higher').addEventListener('click', () => window.game.playerGuess('higher'));
+            document.getElementById('btn-lower').addEventListener('click', () => window.game.playerGuess('lower'));
+            document.getElementById('btn-reset').addEventListener('click', () => window.game.continueGame());
         });
 
     </script>
