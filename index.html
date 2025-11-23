@@ -143,8 +143,8 @@
             cameraOffset: { x: 0, y: 5, z: 16 },
             animationSpeed: 500,
             // Platform & Player Depth (Positive Z is closer to camera)
-            // Tower is Radius 4.5. We need to be well in front of it.
-            zIndex: 6.5,
+            // Tower is Radius 4.5. Setting this to 7.0 ensures we are safe from clipping.
+            zIndex: 7.0,
             // Offset to put feet on TOP of platform (Platform height 0.5 / 2 = 0.25)
             platformTopOffset: 0.25
         };
@@ -213,7 +213,7 @@
                 tower.receiveShadow = true;
                 this.towerGroup.add(tower);
 
-                // 2. Player: Try Loading GLB, fallback to Procedural Sprite if failed
+                // 2. Player: Try Loading GLB
                 this.loadPlayerModel();
 
                 // 3. Platforms (Simple Boxes)
@@ -224,24 +224,38 @@
 
             // --- Auto-Fixer for 3D Models ---
             fitModelToSize(model, targetHeight) {
+                // 1. Reset transforms to ensure calculation is clean
+                model.updateWorldMatrix(true, true);
+                
+                // 2. Calculate box
                 const box = new THREE.Box3().setFromObject(model);
                 const size = box.getSize(new THREE.Vector3());
-                const center = box.getCenter(new THREE.Vector3());
-
-                // 1. Center the model at 0,0,0 based on its bounding box
-                model.position.x -= center.x;
-                model.position.y -= box.min.y; // This puts the feet at Y=0 locally
-                model.position.z -= center.z;
-
-                // 2. Scale the model
+                
+                // 3. Scale
+                let scaleFactor = 1;
                 if (size.y > 0) {
-                    const scaleFactor = targetHeight / size.y;
-                    model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                    scaleFactor = targetHeight / size.y;
                 }
+                model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                
+                // 4. Recalculate box after scale to get correct centering offsets
+                model.updateWorldMatrix(true, true);
+                const scaledBox = new THREE.Box3().setFromObject(model);
+                const center = scaledBox.getCenter(new THREE.Vector3());
+                const bottomY = scaledBox.min.y;
 
-                // 3. Wrapper to hold offset
+                // 5. Create Wrapper
                 const wrapper = new THREE.Group();
                 wrapper.add(model);
+
+                // 6. Reposition Model inside Wrapper so:
+                // - Feet are at Y=0
+                // - X and Z centers are at 0
+                // Note: We use the negated center coordinates because we are moving the model relative to the wrapper origin
+                model.position.x = -center.x;
+                model.position.y = -bottomY;
+                model.position.z = -center.z;
+
                 return wrapper;
             }
 
@@ -252,12 +266,10 @@
                 canvas.height = 256;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, 256, 256);
-                // Body
                 ctx.fillStyle = '#ff8c00';
                 ctx.beginPath();
                 ctx.roundRect(64, 32, 128, 192, 60);
                 ctx.fill();
-                // Glasses
                 ctx.fillStyle = '#111';
                 ctx.beginPath();
                 ctx.roundRect(74, 80, 45, 30, 10);
@@ -269,7 +281,6 @@
                 ctx.moveTo(119, 95);
                 ctx.lineTo(137, 95);
                 ctx.stroke();
-                // Smile
                 ctx.strokeStyle = '#333';
                 ctx.lineWidth = 8;
                 ctx.lineCap = 'round';
@@ -284,7 +295,6 @@
                 const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
                 const geo = new THREE.PlaneGeometry(2.5, 2.5);
                 const mesh = new THREE.Mesh(geo, mat);
-                // Set initial position
                 mesh.position.set(-1.5, 1.5 + SETTINGS.platformTopOffset, SETTINGS.zIndex); 
                 mesh.onBeforeRender = (renderer, scene, camera) => {
                     mesh.quaternion.copy(camera.quaternion);
@@ -293,7 +303,7 @@
             }
 
             loadPlayerModel() {
-                // Create backup first
+                // Create backup first (Orange Sprite)
                 this.player = this.createProceduralPlayer();
                 this.scene.add(this.player);
 
@@ -306,21 +316,19 @@
                             if(this.player) this.scene.remove(this.player);
 
                             // Run Auto-Fixer to normalize size and centering
+                            // Returns a wrapper group with feet at (0,0,0) local
                             const fixedModel = this.fitModelToSize(gltf.scene, 2.5);
                             
                             this.player = fixedModel;
                             
-                            // Position: 
-                            // X: -1.5 (Slightly left)
-                            // Y: 0 + Offset (Stand ON TOP of platform)
-                            // Z: 6.5 (In front of tower)
+                            // Position the wrapper:
+                            // X: -1.5 (Left side)
+                            // Y: platformTopOffset (On top of the 0.5 height platform)
+                            // Z: zIndex (7.0, nicely in front of the tower)
                             this.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex); 
                             
-                            // ROTATION FIX: Turn 180 degrees to face camera
-                            // Default GLB usually faces -Z, we want it to face +Z (Camera is at +16)
+                            // ROTATION: Face the camera (Standard GLB faces -Z, Camera is at +Z)
                             this.player.rotation.y = Math.PI; 
-                            // Add slight angle if you want it 'cool'
-                            // this.player.rotation.y = Math.PI - 0.2; 
 
                             this.player.traverse((node) => {
                                 if (node.isMesh) {
@@ -334,7 +342,7 @@
                         },
                         undefined, 
                         (error) => {
-                            console.warn("GLB load failed (Using Sprite Fallback):", error);
+                            console.warn("GLB load failed:", error);
                             if (window.location.protocol === 'file:') {
                                 document.getElementById('debug-area').innerHTML = "⚠️ Using Backup Sprite.<br>Reason: Browser blocked 3D file.<br>Solution: Use a Local Server.";
                             } else {
@@ -351,7 +359,7 @@
                 const geo = new THREE.BoxGeometry(3.5, 0.5, 3.5);
                 const mat = new THREE.MeshStandardMaterial({ color: 0x555555 });
                 const platform = new THREE.Mesh(geo, mat);
-                // Position platform
+                // Position platform at safe Z index (7.0)
                 platform.position.set(0, level * SETTINGS.floorHeight, SETTINGS.zIndex);
                 platform.castShadow = true;
                 platform.receiveShadow = true;
@@ -379,7 +387,7 @@
             }
 
             playerJumpTo(floorIndex) {
-                // Ensure target includes offset so we land ON the platform
+                // Target Y is Floor Height + Offset
                 const endY = (floorIndex * SETTINGS.floorHeight) + SETTINGS.platformTopOffset; 
                 
                 new TWEEN.Tween(this.player.position)
@@ -387,7 +395,7 @@
                     .easing(TWEEN.Easing.Quadratic.Out)
                     .start();
 
-                // Squash/Stretch effect
+                // Squash/Stretch effect on the wrapper
                 new TWEEN.Tween(this.player.scale)
                     .to({ y: 0.8, x: 1.2, z: 1.2 }, SETTINGS.animationSpeed * 0.5)
                     .yoyo(true)
@@ -445,7 +453,7 @@
                 this.nextCard = this.drawCard();
 
                 if(this.engine.player) {
-                    // Reset position: -1.5 X, Floor 0 + Offset Y, Z-Index 6.5
+                    // Reset position: -1.5 X, Floor 0 + Offset Y, Z-Index 7.0
                     this.engine.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex);
                 }
                 this.engine.camera.position.y = SETTINGS.cameraOffset.y;
