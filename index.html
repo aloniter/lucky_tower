@@ -367,14 +367,28 @@
 
             playerJumpTo(floorIndex) {
                 const endY = (floorIndex * SETTINGS.floorHeight) + SETTINGS.platformTopOffset; 
+                
+                // Position Jump
                 new TWEEN.Tween(this.player.position)
                     .to({ y: endY }, SETTINGS.animationSpeed)
                     .easing(TWEEN.Easing.Quadratic.Out)
                     .start();
+
+                // Squash & Stretch
                 new TWEEN.Tween(this.player.scale)
                     .to({ y: 0.8, x: 1.2, z: 1.2 }, SETTINGS.animationSpeed * 0.5)
                     .yoyo(true)
                     .repeat(1)
+                    .start();
+
+                // 360 Spin Animation
+                // We add 360 degrees (2 * PI) to the current rotation so it spins a full circle
+                // and lands facing the original direction.
+                const startRot = this.player.rotation.y;
+                const endRot = startRot + (Math.PI * 2);
+                new TWEEN.Tween(this.player.rotation)
+                    .to({ y: endRot }, SETTINGS.animationSpeed)
+                    .easing(TWEEN.Easing.Cubic.InOut)
                     .start();
             }
 
