@@ -186,10 +186,23 @@
                         (tex) => {
                             console.log(`Loaded background: ${url}`);
                             tex.encoding = THREE.sRGBEncoding; 
+
+                            // --- START FIX: ADJUST TEXTURE MAPPING ---
+                            // 1. Enable wrapping so we can shift the image
+                            tex.wrapS = THREE.RepeatWrapping;
+                            tex.wrapT = THREE.RepeatWrapping;
+                            
+                            // 2. Repeat horizontally (4x) to reduce stretching and make it look sharper
+                            //    Keep vertical (y) at 1 to show the full height of the image
+                            tex.repeat.set(4, 1);
+
+                            // 3. Offset Y (Vertical Shift)
+                            //    -0.20 pulls the image UP so the bottom (grass) sits at eye level
+                            tex.offset.set(0, -0.20); 
+                            // --- END FIX ---
+
                             this.backgrounds[keys[index]] = tex;
                             
-                            // Force update if this is the first level and current map is null/default
-                            // We check the logic in updateBackground mostly, but initial load helper:
                             if(index === 0) {
                                 this.updateBackground(1);
                             }
