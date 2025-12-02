@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Higher Lower Tower - 3D Mockup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * { box-sizing: border-box; }
+        
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #87CEEB;
+            font-family: 'Poppins', sans-serif; 
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #bg-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        
+        #canvas-container { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 1; 
+        }
+        
+        #ui-layer { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 10; 
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .interactive { pointer-events: auto; }
+
+        .card-ui {
+            width: 85px;
+            height: 120px;
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+            font-weight: bold;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+            position: relative;
+        }
+        
+        .card-ui.red { color: #dc2626; border: 3px solid #fecaca; }
+        .card-ui.black { color: #1f2937; border: 3px solid #e5e7eb; }
+        
+        .card-ui.back { 
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%);
+            border: 3px solid rgba(255,255,255,0.3);
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
+        }
+        
+        .card-rank { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+        .card-suit { font-size: 2rem; text-align: center; }
+        .card-rank-bottom { font-size: 1.3rem; font-weight: 800; align-self: flex-end; transform: rotate(180deg); }
+        
+        .card-reveal { animation: cardReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes cardReveal {
+            0% { transform: rotateY(180deg) scale(0.8); opacity: 0; }
+            100% { transform: rotateY(0) scale(1); opacity: 1; }
+        }
+        
+        .card-glow-win { box-shadow: 0 0 30px rgba(34, 197, 94, 0.6), 0 0 60px rgba(34, 197, 94, 0.4) !important; }
+        .card-glow-lose { box-shadow: 0 0 30px rgba(239, 68, 68, 0.6), 0 0 60px rgba(239, 68, 68, 0.4) !important; }
+        
+        .vs-badge {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: #1f2937;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+        }
+        
+        .bg-glass {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        .floor-badge {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .progress-track {
+            height: 6px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        
+        .btn-game {
+            flex: 1;
+            padding: 16px 24px;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-higher {
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 6px 0 #1d4ed8;
+        }
+        .btn-higher:active { transform: translateY(4px); box-shadow: 0 2px 0 #1d4ed8; }
+        
+        .btn-lower {
+            background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            box-shadow: 0 6px 0 #b91c1c;
+        }
+        .btn-lower:active { transform: translateY(4px); box-shadow: 0 2px 0 #b91c1c; }
+        
+        #game-message {
+            font-family: 'Black Ops One', cursive;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 40px currentColor;
+        }
+        
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+            animation: particleFly 1s ease-out forwards;
+        }
+        @keyframes particleFly {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+        
+        .card-panel {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            z-index: 20;
+        }
+        .card-panel.left { left: 16px; }
+        .card-panel.right { right: 16px; }
+        
+        .card-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        
+        .vs-center {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 25;
+        }
+        
+        @media (max-width: 480px) {
+            .card-ui { width: 70px; height: 100px; padding: 8px; }
+            .card-rank, .card-rank-bottom { font-size: 1.1rem; }
+            .card-suit { font-size: 1.6rem; }
+            .btn-game { padding: 14px 16px; font-size: 1rem; }
+            .card-panel.left { left: 10px; }
+            .card-panel.right { right: 10px; }
+        }
+        
+        .streak-flame { display: inline-block; animation: flameDance 0.5s ease-in-out infinite alternate; }
+        @keyframes flameDance {
+            0% { transform: scale(1) rotate(-5deg); }
+            100% { transform: scale(1.1) rotate(5deg); }
+        }
+        
+        .safe-bottom { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+        .safe-top { padding-top: max(16px, env(safe-area-inset-top)); }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div class="flex justify-between items-start p-4 safe-top interactive">
+            <div class="bg-glass p-3 rounded-2xl min-w-[100px]">
+                <div class="text-[10px] text-gray-300 uppercase tracking-widest font-semibold">Floor</div>
+                <div class="text-4xl font-extrabold floor-badge" id="floor-display">1</div>
+                <div class="progress-track mt-2">
+                    <div class="progress-fill" id="floor-progress" style="width: 10%"></div>
+                </div>
+            </div>
+            
+            <div class="bg-glass p-3 rounded-2xl text-right min-w-[120px]">
+                <div class="text-[10px] text-gray-300 uppercase tracking-widest font-semibold">Score</div>
+                <div class="text-2xl font-bold text-white" id="score-display">0</div>
+                <div class="text-xs text-amber-400 mt-1" id="streak-display" style="opacity: 0">
+                    <span class="streak-flame">🔥</span>
+                    <span id="streak-count">0</span> streak
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 flex items-start justify-center pt-8 pointer-events-none">
+            <div id="game-message" class="text-4xl md:text-6xl font-black text-white transform transition-all duration-300 opacity-0 scale-50"></div>
+        </div>
+
+        <div class="card-panel left pointer-events-none">
+            <div class="card-label">Current</div>
+            <div id="ui-card-current" class="card-ui black">
+                <div class="card-rank">A</div>
+                <div class="card-suit">♠</div>
+                <div class="card-rank-bottom">A</div>
+            </div>
+        </div>
+        
+        <div class="card-panel right pointer-events-none">
+            <div class="card-label">Next</div>
+            <div id="ui-card-next" class="card-ui back">?</div>
+        </div>
+        
+        <div class="vs-center vs-badge pointer-events-none">VS</div>
+
+        <div class="w-full px-4 pb-4 safe-bottom interactive">
+            <div class="max-w-md mx-auto">
+                <div id="controls-guess" class="flex gap-3">
+                    <button id="btn-higher" class="btn-game btn-higher">
+                        <span>▲</span><span>HIGHER</span>
+                    </button>
+                    <button id="btn-lower" class="btn-game btn-lower">
+                        <span>▼</span><span>LOWER</span>
+                    </button>
+                </div>
+                
+                <div id="controls-reset" class="hidden">
+                    <div class="bg-glass p-4 rounded-2xl mb-3 text-center">
+                        <div class="text-red-400 text-xl font-bold mb-1">Wrong Guess!</div>
+                        <p class="text-gray-300 text-sm">Try this floor again</p>
+                    </div>
+                    <button id="btn-reset" class="w-full btn-game" style="background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%); color: white; box-shadow: 0 6px 0 #4338ca;">
+                        <span>🔄</span><span>TRY AGAIN</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="particles" style="position: fixed; inset: 0; pointer-events: none; z-index: 100;"></div>
+
+    <script>
+        // ========== SETTINGS ==========
+        const SETTINGS = {
+            floorHeight: 6, 
+            cameraOffset: { x: 0, y: 5, z: 16 },
+            animationSpeed: 500,
+            zIndex: 7.0,
+            platformTopOffset: 0.25,
+            playerRotation: -Math.PI / 2
+        };
+
+        const TOWER_COLORS = [
+            { platform: 0x4ade80, tower: 0x22c55e, glow: '#22c55e' },
+            { platform: 0x38bdf8, tower: 0x0ea5e9, glow: '#0ea5e9' },
+            { platform: 0xa78bfa, tower: 0x8b5cf6, glow: '#8b5cf6' },
+            { platform: 0xfbbf24, tower: 0xf59e0b, glow: '#f59e0b' },
+            { platform: 0xf472b6, tower: 0xec4899, glow: '#ec4899' },
+            { platform: 0xfb7185, tower: 0xf43f5e, glow: '#f43f5e' },
+        ];
+
+        // ========== BACKGROUND RENDERER ==========
+        class BackgroundRenderer {
+            constructor() {
+                this.canvas = document.getElementById('bg-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.currentFloor = 1;
+                this.cloudOffset = 0;
+                
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                this.animate();
+            }
+            
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            
+            setFloor(floor) {
+                this.currentFloor = floor;
+            }
+            
+            animate() {
+                this.cloudOffset += 0.15;
+                this.draw();
+                requestAnimationFrame(() => this.animate());
+            }
+            
+            draw() {
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                const ctx = this.ctx;
+                const floor = this.currentFloor;
+                
+                // Altitude: 0 = ground, 1 = space
+                const altitude = Math.min((floor - 1) / 25, 1);
+                
+                // === SKY GRADIENT ===
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+                
+                if (altitude < 0.15) {
+                    // Ground level
+                    skyGrad.addColorStop(0, '#7DD3FC');
+                    skyGrad.addColorStop(0.5, '#BAE6FD');
+                    skyGrad.addColorStop(0.75, '#E0F2FE');
+                    skyGrad.addColorStop(1, '#86EFAC');
+                } else if (altitude < 0.4) {
+                    // Low sky
+                    const t = (altitude - 0.15) / 0.25;
+                    skyGrad.addColorStop(0, this.lerp('#7DD3FC', '#0EA5E9', t));
+                    skyGrad.addColorStop(0.5, this.lerp('#BAE6FD', '#38BDF8', t));
+                    skyGrad.addColorStop(1, this.lerp('#E0F2FE', '#7DD3FC', t));
+                } else if (altitude < 0.7) {
+                    // Mid sky
+                    const t = (altitude - 0.4) / 0.3;
+                    skyGrad.addColorStop(0, this.lerp('#0EA5E9', '#0369A1', t));
+                    skyGrad.addColorStop(0.5, this.lerp('#38BDF8', '#0EA5E9', t));
+                    skyGrad.addColorStop(1, this.lerp('#7DD3FC', '#38BDF8', t));
+                } else {
+                    // High sky / space
+                    const t = (altitude - 0.7) / 0.3;
+                    skyGrad.addColorStop(0, this.lerp('#0369A1', '#1E1B4B', t));
+                    skyGrad.addColorStop(0.4, this.lerp('#0EA5E9', '#312E81', t));
+                    skyGrad.addColorStop(0.7, this.lerp('#38BDF8', '#6366F1', t));
+                    skyGrad.addColorStop(1, this.lerp('#7DD3FC', '#A78BFA', t));
+                }
+                
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, w, h);
+                
+                // === SUN ===
+                this.drawSun(ctx, w, h, altitude);
+                
+                // === STARS (high altitude) ===
+                if (altitude > 0.6) {
+                    this.drawStars(ctx, w, h, altitude);
+                }
+                
+                // === CLOUDS ===
+                this.drawClouds(ctx, w, h, altitude);
+                
+                // === MOUNTAINS ===
+                if (altitude < 0.35) {
+                    this.drawMountains(ctx, w, h, altitude);
+                }
+                
+                // === HILLS ===
+                if (altitude < 0.2) {
+                    this.drawHills(ctx, w, h, altitude);
+                }
+                
+                // === GRASS ===
+                if (altitude < 0.12) {
+                    this.drawGrass(ctx, w, h, altitude);
+                }
+            }
+            
+            drawSun(ctx, w, h, altitude) {
+                const sunX = w * 0.82;
+                const sunY = h * (0.15 + altitude * 0.1);
+                const sunR = 45 - altitude * 15;
+                
+                // Glow
+                const glow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR * 4);
+                if (altitude < 0.6) {
+                    glow.addColorStop(0, 'rgba(253, 224, 71, 0.8)');
+                    glow.addColorStop(0.3, 'rgba(251, 191, 36, 0.3)');
+                    glow.addColorStop(1, 'rgba(251, 191, 36, 0)');
+                } else {
+                    glow.addColorStop(0, 'rgba(226, 232, 240, 0.6)');
+                    glow.addColorStop(0.3, 'rgba(203, 213, 225, 0.2)');
+                    glow.addColorStop(1, 'rgba(203, 213, 225, 0)');
+                }
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(sunX, sunY, sunR * 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Body
+                ctx.fillStyle = altitude < 0.6 ? '#FDE047' : '#E2E8F0';
+                ctx.beginPath();
+                ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            drawStars(ctx, w, h, altitude) {
+                const opacity = (altitude - 0.6) / 0.4;
+                ctx.fillStyle = '#FFFFFF';
+                
+                for (let i = 0; i < 60; i++) {
+                    const x = this.seededRandom(i * 3) * w;
+                    const y = this.seededRandom(i * 7) * h * 0.5;
+                    const size = 0.5 + this.seededRandom(i * 11) * 2;
+                    const twinkle = 0.3 + Math.sin(Date.now() / 400 + i) * 0.7;
+                    
+                    ctx.globalAlpha = opacity * twinkle;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+            }
+            
+            drawClouds(ctx, w, h, altitude) {
+                const layers = [
+                    { count: 5, yMin: 0.08, yMax: 0.25, scale: 1.4, speed: 0.3, opacity: 0.95 },
+                    { count: 7, yMin: 0.2, yMax: 0.4, scale: 1.1, speed: 0.6, opacity: 0.8 },
+                    { count: 6, yMin: 0.35, yMax: 0.55, scale: 0.8, speed: 1.0, opacity: 0.6 },
+                ];
+                
+                layers.forEach((layer, li) => {
+                    for (let i = 0; i < layer.count; i++) {
+                        const seed = li * 100 + i;
+                        const baseX = this.seededRandom(seed) * (w + 400) - 200;
+                        const cloudX = (baseX + this.cloudOffset * layer.speed) % (w + 400) - 200;
+                        const cloudY = h * (layer.yMin + this.seededRandom(seed + 50) * (layer.yMax - layer.yMin));
+                        const adjustedY = cloudY + altitude * h * 0.6;
+                        
+                        if (adjustedY < h * 0.85 && adjustedY > -80) {
+                            this.drawCloud(ctx, cloudX, adjustedY, layer.scale, layer.opacity * (1 - altitude * 0.4), altitude);
+                        }
+                    }
+                });
+            }
+            
+            drawCloud(ctx, x, y, scale, opacity, altitude) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, opacity);
+                ctx.fillStyle = altitude < 0.5 ? '#FFFFFF' : this.lerp('#FFFFFF', '#E0E7FF', (altitude - 0.5) * 2);
+                
+                const r = 30 * scale;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.arc(x + r * 0.7, y - r * 0.25, r * 0.8, 0, Math.PI * 2);
+                ctx.arc(x + r * 1.4, y, r * 0.7, 0, Math.PI * 2);
+                ctx.arc(x - r * 0.5, y + r * 0.15, r * 0.65, 0, Math.PI * 2);
+                ctx.arc(x + r * 0.5, y + r * 0.25, r * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            
+            drawMountains(ctx, w, h, altitude) {
+                const opacity = 1 - altitude / 0.35;
+                const yOff = altitude * h * 0.6;
+                
+                // Back mountains
+                ctx.globalAlpha = opacity * 0.7;
+                ctx.fillStyle = '#94A3B8';
+                ctx.beginPath();
+                ctx.moveTo(0, h);
+                ctx.lineTo(0, h * 0.55 + yOff);
+                ctx.lineTo(w * 0.15, h * 0.4 + yOff);
+                ctx.lineTo(w * 0.3, h * 0.5 + yOff);
+                ctx.lineTo(w * 0.5, h * 0.38 + yOff);
+                ctx.lineTo(w * 0.7, h * 0.48 + yOff);
+                ctx.lineTo(w * 0.85, h * 0.42 + yOff);
+                ctx.lineTo(w, h * 0.5 + yOff);
+                ctx.lineTo(w, h);
+                ctx.fill();
+                
+                // Front mountains
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = '#64748B';
+                ctx.beginPath();
+                ctx.moveTo(0, h);
+                ctx.lineTo(0, h * 0.6 + yOff);
+                ctx.lineTo(w * 0.2, h * 0.48 + yOff);
+                ctx.lineTo(w * 0.35, h * 0.55 + yOff);
+                ctx.lineTo(w * 0.55, h * 0.45 + yOff);
+                ctx.lineTo(w * 0.75, h * 0.52 + yOff);
+                ctx.lineTo(w * 0.9, h * 0.46 + yOff);
+                ctx.lineTo(w, h * 0.54 + yOff);
+                ctx.lineTo(w, h);
+                ctx.fill();
+                
+                ctx.globalAlpha = 1;
+            }
+            
+            drawHills(ctx, w, h, altitude) {
+                const opacity = 1 - altitude / 0.2;
+                const yOff = altitude * h * 0.9;
+                
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = '#4ADE80';
+                ctx.beginPath();
+                ctx.moveTo(0, h);
+                ctx.lineTo(0, h * 0.7 + yOff);
+                ctx.quadraticCurveTo(w * 0.2, h * 0.62 + yOff, w * 0.35, h * 0.7 + yOff);
+                ctx.quadraticCurveTo(w * 0.5, h * 0.64 + yOff, w * 0.65, h * 0.72 + yOff);
+                ctx.quadraticCurveTo(w * 0.85, h * 0.65 + yOff, w, h * 0.68 + yOff);
+                ctx.lineTo(w, h);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            
+            drawGrass(ctx, w, h, altitude) {
+                const opacity = 1 - altitude / 0.12;
+                const yOff = altitude * h * 1.3;
+                const groundY = h * 0.8 + yOff;
+                
+                if (groundY > h) return;
+                
+                ctx.globalAlpha = opacity;
+                
+                // Grass base
+                const grassGrad = ctx.createLinearGradient(0, groundY, 0, h);
+                grassGrad.addColorStop(0, '#22C55E');
+                grassGrad.addColorStop(0.4, '#16A34A');
+                grassGrad.addColorStop(1, '#15803D');
+                ctx.fillStyle = grassGrad;
+                ctx.fillRect(0, groundY, w, h - groundY);
+                
+                // Grass blades
+                ctx.strokeStyle = '#4ADE80';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < w; i += 10) {
+                    const bladeH = 12 + Math.random() * 20;
+                    const curve = (Math.random() - 0.5) * 12;
+                    ctx.beginPath();
+                    ctx.moveTo(i, groundY);
+                    ctx.quadraticCurveTo(i + curve * 0.5, groundY - bladeH * 0.5, i + curve, groundY - bladeH);
+                    ctx.stroke();
+                }
+                
+                ctx.globalAlpha = 1;
+            }
+            
+            seededRandom(seed) {
+                const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+                return x - Math.floor(x);
+            }
+            
+            lerp(c1, c2, t) {
+                const rgb1 = this.hexToRgb(c1);
+                const rgb2 = this.hexToRgb(c2);
+                const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * t);
+                const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * t);
+                const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * t);
+                return `rgb(${r},${g},${b})`;
+            }
+            
+            hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : { r: 0, g: 0, b: 0 };
+            }
+        }
+
+        // ========== 3D ENGINE ==========
+        class GameEngine {
+            constructor() {
+                this.scene = new THREE.Scene();
+                
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(SETTINGS.cameraOffset.x, SETTINGS.cameraOffset.y, SETTINGS.cameraOffset.z);
+                this.camera.lookAt(0, SETTINGS.floorHeight / 2, 0);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.setClearColor(0x000000, 0);
+                document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+
+                // Lights
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+                dirLight.position.set(5, 15, 10);
+                this.scene.add(dirLight);
+
+                this.towerGroup = new THREE.Group();
+                this.platformsGroup = new THREE.Group();
+                this.scene.add(this.towerGroup);
+                this.scene.add(this.platformsGroup);
+
+                this.player = null;
+                this.platforms = [];
+                this.gltfLoader = new THREE.GLTFLoader();
+                
+                // Background renderer
+                this.bgRenderer = new BackgroundRenderer();
+
+                window.addEventListener('resize', () => this.onResize());
+                this.clock = new THREE.Clock();
+                this.animate();
+            }
+            
+            onResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                TWEEN.update();
+                
+                const t = this.clock.getElapsedTime();
+                this.platforms.forEach((p, i) => {
+                    p.position.y = i * SETTINGS.floorHeight + Math.sin(t * 2 + i * 0.5) * 0.05;
+                });
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+            
+            updateBackground(floor) {
+                this.bgRenderer.setFloor(floor);
+                this.updateTowerColor(floor);
+            }
+            
+            updateTowerColor(floor) {
+                const colorIndex = (floor - 1) % TOWER_COLORS.length;
+                const colors = TOWER_COLORS[colorIndex];
+                
+                if (this.towerMesh) {
+                    const target = new THREE.Color(colors.tower);
+                    new TWEEN.Tween(this.towerMesh.material.color)
+                        .to({ r: target.r, g: target.g, b: target.b }, 500)
+                        .start();
+                }
+                
+                this.platforms.forEach((p, i) => {
+                    const pColors = TOWER_COLORS[i % TOWER_COLORS.length];
+                    if (i + 1 === floor) {
+                        p.material.emissive = new THREE.Color(pColors.platform);
+                        p.material.emissiveIntensity = 0.3;
+                    } else if (i + 1 < floor) {
+                        p.material.color = new THREE.Color(pColors.platform);
+                        p.material.emissive = new THREE.Color(0x000000);
+                    }
+                });
+            }
+            
+            initWorld() {
+                // Tower
+                const towerGeo = new THREE.CylinderGeometry(4, 4.5, 400, 32);
+                const towerMat = new THREE.MeshStandardMaterial({ color: TOWER_COLORS[0].tower, metalness: 0.2, roughness: 0.8 });
+                this.towerMesh = new THREE.Mesh(towerGeo, towerMat);
+                this.towerMesh.position.y = 190;
+                this.towerGroup.add(this.towerMesh);
+                
+                // Rings
+                for (let i = 0; i < 25; i++) {
+                    const ringGeo = new THREE.TorusGeometry(4.6, 0.1, 8, 32);
+                    const ringMat = new THREE.MeshBasicMaterial({ color: TOWER_COLORS[i % TOWER_COLORS.length].glow, transparent: true, opacity: 0.4 });
+                    const ring = new THREE.Mesh(ringGeo, ringMat);
+                    ring.rotation.x = Math.PI / 2;
+                    ring.position.y = i * SETTINGS.floorHeight * 2.5;
+                    this.towerGroup.add(ring);
+                }
+
+                // Platforms
+                for (let i = 0; i < 60; i++) {
+                    this.addPlatform(i);
+                }
+                
+                // Player
+                this.loadPlayer();
+            }
+            
+            addPlatform(level) {
+                const colors = TOWER_COLORS[level % TOWER_COLORS.length];
+                const geo = new THREE.BoxGeometry(3.5, 0.5, 3.5);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: level === 0 ? colors.platform : 0x555555,
+                    metalness: 0.3,
+                    roughness: 0.7,
+                    emissive: level === 0 ? colors.platform : 0x000000,
+                    emissiveIntensity: level === 0 ? 0.2 : 0
+                });
+                const platform = new THREE.Mesh(geo, mat);
+                platform.position.set(0, level * SETTINGS.floorHeight, SETTINGS.zIndex);
+                this.platformsGroup.add(platform);
+                this.platforms.push(platform);
+                
+                // Edge glow
+                const edgeGeo = new THREE.BoxGeometry(3.6, 0.1, 3.6);
+                const edgeMat = new THREE.MeshBasicMaterial({ color: colors.platform, transparent: true, opacity: 0.3 });
+                const edge = new THREE.Mesh(edgeGeo, edgeMat);
+                edge.position.y = 0.3;
+                platform.add(edge);
+            }
+            
+            loadPlayer() {
+                // Procedural player
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ff8c00';
+                ctx.beginPath();
+                ctx.roundRect(64, 32, 128, 192, 60);
+                ctx.fill();
+                ctx.fillStyle = '#111';
+                ctx.beginPath();
+                ctx.roundRect(74, 80, 45, 30, 10);
+                ctx.roundRect(137, 80, 45, 30, 10);
+                ctx.fill();
+                
+                const tex = new THREE.CanvasTexture(canvas);
+                const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
+                const geo = new THREE.PlaneGeometry(2.5, 2.5);
+                this.player = new THREE.Mesh(geo, mat);
+                this.player.position.set(-1.5, 1.5 + SETTINGS.platformTopOffset, SETTINGS.zIndex);
+                this.player.onBeforeRender = (r, s, cam) => this.player.quaternion.copy(cam.quaternion);
+                this.scene.add(this.player);
+                
+                // Try to load GLB
+                try {
+                    this.gltfLoader.load('character.glb', (gltf) => {
+                        this.scene.remove(this.player);
+                        gltf.scene.updateWorldMatrix(true, true);
+                        const box = new THREE.Box3().setFromObject(gltf.scene);
+                        const size = box.getSize(new THREE.Vector3());
+                        const scale = 2.5 / (size.y || 1);
+                        gltf.scene.scale.set(scale, scale, scale);
+                        
+                        const wrapper = new THREE.Group();
+                        wrapper.add(gltf.scene);
+                        gltf.scene.updateWorldMatrix(true, true);
+                        const newBox = new THREE.Box3().setFromObject(gltf.scene);
+                        const center = newBox.getCenter(new THREE.Vector3());
+                        gltf.scene.position.set(-center.x, -newBox.min.y, -center.z);
+                        
+                        this.player = wrapper;
+                        this.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex);
+                        this.player.rotation.y = SETTINGS.playerRotation;
+                        this.scene.add(this.player);
+                    }, undefined, () => {});
+                } catch (e) {}
+            }
+            
+            moveCameraToFloor(floorIndex) {
+                const targetY = floorIndex * SETTINGS.floorHeight + SETTINGS.cameraOffset.y;
+                new TWEEN.Tween(this.camera.position)
+                    .to({ y: targetY }, SETTINGS.animationSpeed * 1.2)
+                    .easing(TWEEN.Easing.Cubic.InOut)
+                    .start();
+            }
+            
+            playerJumpTo(floorIndex) {
+                const endY = floorIndex * SETTINGS.floorHeight + SETTINGS.platformTopOffset;
+                const startY = this.player.position.y;
+                const peakY = Math.max(startY, endY) + 2;
+                
+                new TWEEN.Tween(this.player.position)
+                    .to({ y: peakY }, SETTINGS.animationSpeed * 0.5)
+                    .easing(TWEEN.Easing.Quadratic.Out)
+                    .chain(new TWEEN.Tween(this.player.position).to({ y: endY }, SETTINGS.animationSpeed * 0.5).easing(TWEEN.Easing.Bounce.Out))
+                    .start();
+
+                new TWEEN.Tween(this.player.scale)
+                    .to({ y: 1.3, x: 0.8, z: 0.8 }, SETTINGS.animationSpeed * 0.3)
+                    .chain(new TWEEN.Tween(this.player.scale).to({ y: 0.8, x: 1.2, z: 1.2 }, SETTINGS.animationSpeed * 0.3)
+                        .chain(new TWEEN.Tween(this.player.scale).to({ y: 1, x: 1, z: 1 }, SETTINGS.animationSpeed * 0.4).easing(TWEEN.Easing.Elastic.Out)))
+                    .start();
+
+                const startRot = this.player.rotation.y;
+                new TWEEN.Tween(this.player.rotation)
+                    .to({ y: startRot + Math.PI * 2 }, SETTINGS.animationSpeed)
+                    .easing(TWEEN.Easing.Cubic.InOut)
+                    .start();
+            }
+            
+            celebratePlatform(floorIndex) {
+                const platform = this.platforms[floorIndex];
+                if (!platform) return;
+                const colors = TOWER_COLORS[floorIndex % TOWER_COLORS.length];
+                platform.material.emissive = new THREE.Color(colors.platform);
+                platform.material.color = new THREE.Color(colors.platform);
+                new TWEEN.Tween({ i: 0 })
+                    .to({ i: 0.5 }, 200)
+                    .onUpdate(o => platform.material.emissiveIntensity = o.i)
+                    .chain(new TWEEN.Tween({ i: 0.5 }).to({ i: 0.15 }, 300).onUpdate(o => platform.material.emissiveIntensity = o.i))
+                    .start();
+            }
+        }
+
+        // ========== GAME LOGIC ==========
+        class GameLogic {
+            constructor(engine) {
+                this.engine = engine;
+                this.deck = [];
+                this.currentCard = null;
+                this.nextCard = null;
+                this.floor = 1;
+                this.score = 0;
+                this.streak = 0;
+                this.init();
+            }
+            
+            init() {
+                this.floor = 1;
+                this.score = 0;
+                this.streak = 0;
+                this.generateDeck();
+                this.currentCard = this.drawCard();
+                this.nextCard = this.drawCard();
+                
+                if (this.engine.player) {
+                    this.engine.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex);
+                }
+                this.engine.camera.position.y = SETTINGS.cameraOffset.y;
+                this.engine.updateBackground(1);
+                
+                this.updateCardUI();
+                this.updateUI();
+                this.setPhase('guess');
+            }
+            
+            generateDeck() {
+                const suits = [{ s: '♥', c: '#ef4444' }, { s: '♦', c: '#ef4444' }, { s: '♣', c: '#1f2937' }, { s: '♠', c: '#1f2937' }];
+                const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+                this.deck = [];
+                for (let d = 0; d < 5; d++) {
+                    for (const suit of suits) {
+                        for (let i = 0; i < ranks.length; i++) {
+                            this.deck.push({ rank: ranks[i], value: i + 2, suitIcon: suit.s, color: suit.c });
+                        }
+                    }
+                }
+                for (let i = this.deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+                }
+            }
+            
+            drawCard() {
+                if (this.deck.length === 0) this.generateDeck();
+                return this.deck.pop();
+            }
+            
+            async playerGuess(choice) {
+                this.setPhase('locked');
+                await this.revealNextCard();
+                
+                const won = (choice === 'higher' && this.nextCard.value >= this.currentCard.value) ||
+                            (choice === 'lower' && this.nextCard.value <= this.currentCard.value);
+                
+                this.showCardResult(won);
+                setTimeout(() => won ? this.handleWin() : this.handleLoss(), won ? 400 : 600);
+            }
+            
+            revealNextCard() {
+                return new Promise(resolve => {
+                    const el = document.getElementById('ui-card-next');
+                    el.style.transform = 'rotateY(90deg) scale(0.9)';
+                    setTimeout(() => {
+                        const n = this.nextCard;
+                        el.className = `card-ui card-reveal ${n.color === '#ef4444' ? 'red' : 'black'}`;
+                        el.innerHTML = `<div class="card-rank">${n.rank}</div><div class="card-suit">${n.suitIcon}</div><div class="card-rank-bottom">${n.rank}</div>`;
+                        el.style.transform = 'rotateY(0) scale(1)';
+                        setTimeout(resolve, 300);
+                    }, 200);
+                });
+            }
+            
+            showCardResult(isWin) {
+                const el = document.getElementById('ui-card-next');
+                el.classList.add(isWin ? 'card-glow-win' : 'card-glow-lose');
+                if (isWin) this.spawnParticles();
+                setTimeout(() => el.classList.remove('card-glow-win', 'card-glow-lose'), 800);
+            }
+            
+            spawnParticles() {
+                const container = document.getElementById('particles');
+                const colors = ['#22c55e', '#4ade80', '#86efac', '#fbbf24'];
+                const rect = document.getElementById('ui-card-next').getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                
+                for (let i = 0; i < 20; i++) {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    const size = Math.random() * 10 + 5;
+                    p.style.cssText = `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};--tx:${(Math.random()-0.5)*200}px;--ty:${(Math.random()-0.5)*200}px`;
+                    container.appendChild(p);
+                    setTimeout(() => p.remove(), 1000);
+                }
+            }
+            
+            handleWin() {
+                this.showMessage("CORRECT!", false);
+                this.streak++;
+                this.score += Math.floor(100 * this.floor * (1 + this.streak * 0.1));
+                this.floor++;
+                
+                this.engine.playerJumpTo(this.floor - 1);
+                this.engine.moveCameraToFloor(this.floor - 1);
+                this.engine.updateBackground(this.floor);
+                this.engine.celebratePlatform(this.floor - 1);
+                
+                this.updateUI();
+                setTimeout(() => this.setupNextRound(), SETTINGS.animationSpeed + 100);
+            }
+            
+            handleLoss() {
+                this.showMessage("TRY AGAIN!", true);
+                this.streak = 0;
+                this.updateUI();
+                this.setPhase('gameover');
+            }
+            
+            setupNextRound() {
+                this.currentCard = this.nextCard;
+                this.nextCard = this.drawCard();
+                this.updateCardUI();
+                this.setPhase('guess');
+            }
+            
+            continueGame() {
+                this.nextCard = this.drawCard();
+                this.updateCardUI();
+                this.setPhase('guess');
+            }
+            
+            updateCardUI() {
+                const c = this.currentCard;
+                const cEl = document.getElementById('ui-card-current');
+                cEl.className = `card-ui ${c.color === '#ef4444' ? 'red' : 'black'}`;
+                cEl.innerHTML = `<div class="card-rank">${c.rank}</div><div class="card-suit">${c.suitIcon}</div><div class="card-rank-bottom">${c.rank}</div>`;
+                
+                const nEl = document.getElementById('ui-card-next');
+                nEl.className = 'card-ui back';
+                nEl.innerHTML = '?';
+                nEl.style.transform = '';
+            }
+            
+            showMessage(text, isBad) {
+                const el = document.getElementById('game-message');
+                el.innerText = text;
+                el.style.color = isBad ? '#f87171' : '#4ade80';
+                el.style.opacity = 1;
+                el.style.transform = 'scale(1)';
+                setTimeout(() => { el.style.opacity = 0; el.style.transform = 'scale(0.5)'; }, 1200);
+            }
+            
+            updateUI() {
+                document.getElementById('floor-display').innerText = this.floor;
+                document.getElementById('floor-progress').style.width = ((this.floor - 1) % 10 + 1) * 10 + '%';
+                document.getElementById('score-display').innerText = this.score;
+                
+                const streakEl = document.getElementById('streak-display');
+                if (this.streak > 1) {
+                    streakEl.style.opacity = '1';
+                    document.getElementById('streak-count').innerText = this.streak;
+                } else {
+                    streakEl.style.opacity = '0';
+                }
+            }
+            
+            setPhase(phase) {
+                document.getElementById('controls-guess').classList.toggle('hidden', phase !== 'guess');
+                document.getElementById('controls-reset').classList.toggle('hidden', phase !== 'gameover');
+            }
+        }
+
+        // ========== INIT ==========
+        const engine = new GameEngine();
+        engine.initWorld();
+        const game = new GameLogic(engine);
+        window.game = game;
+
+        document.getElementById('btn-higher').addEventListener('click', () => game.playerGuess('higher'));
+        document.getElementById('btn-lower').addEventListener('click', () => game.playerGuess('lower'));
+        document.getElementById('btn-reset').addEventListener('click', () => game.continueGame());
+    </script>
+</body>
+</html>
