@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Higher Lower Tower - 3D Mockup</title>
+    <title>Higher Lower Tower - Auto Replay</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
     
@@ -190,7 +190,6 @@
             border-radius: 20px;
         }
         
-
         
         @media (max-width: 480px) {
             .card-ui { width: 70px; height: 100px; padding: 8px; }
@@ -258,26 +257,15 @@
             <div id="ui-card-next" class="card-ui back">?</div>
         </div>
         
-    
 
         <div class="w-full px-4 pb-4 safe-bottom interactive">
             <div class="max-w-md mx-auto">
-                <div id="controls-guess" class="flex gap-3">
+                <div id="controls-guess" class="flex gap-3 transition-opacity duration-300">
                     <button id="btn-higher" class="btn-game btn-higher">
                         <span>▲</span><span>HIGHER</span>
                     </button>
                     <button id="btn-lower" class="btn-game btn-lower">
                         <span>▼</span><span>LOWER</span>
-                    </button>
-                </div>
-                
-                <div id="controls-reset" class="hidden">
-                    <div class="bg-glass p-4 rounded-2xl mb-3 text-center">
-                        <div class="text-red-400 text-xl font-bold mb-1">Wrong Guess!</div>
-                        <p class="text-gray-300 text-sm">Try this floor again</p>
-                    </div>
-                    <button id="btn-reset" class="w-full btn-game" style="background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%); color: white; box-shadow: 0 6px 0 #4338ca;">
-                        <span>🔄</span><span>TRY AGAIN</span>
                     </button>
                 </div>
             </div>
@@ -810,6 +798,44 @@
                     .easing(TWEEN.Easing.Cubic.InOut)
                     .start();
             }
+
+            // NEW: Failed jump animation
+            playerFailJump() {
+                const startY = this.player.position.y;
+                // Jump up about 60% of a floor height
+                const peakY = startY + (SETTINGS.floorHeight * 0.6); 
+                
+                // 1. Jump Up
+                new TWEEN.Tween(this.player.position)
+                    .to({ y: peakY }, SETTINGS.animationSpeed * 0.5)
+                    .easing(TWEEN.Easing.Quadratic.Out)
+                    .chain(
+                        // 2. Fall Down hard
+                        new TWEEN.Tween(this.player.position)
+                            .to({ y: startY }, SETTINGS.animationSpeed * 0.6)
+                            .easing(TWEEN.Easing.Bounce.Out)
+                    )
+                    .start();
+
+                // 3. Stretch & Squash (Fail visualization)
+                new TWEEN.Tween(this.player.scale)
+                    .to({ y: 1.1, x: 0.9, z: 0.9 }, SETTINGS.animationSpeed * 0.4) // Stretch up
+                    .chain(
+                        new TWEEN.Tween(this.player.scale)
+                        .to({ y: 0.7, x: 1.3, z: 1.3 }, SETTINGS.animationSpeed * 0.3) // Squash down on landing
+                        .chain(
+                             new TWEEN.Tween(this.player.scale).to({ y: 1, x: 1, z: 1 }, 300) // Recovery
+                        )
+                    )
+                    .start();
+                    
+                // 4. Little rotation wobble (The "oops" moment)
+                new TWEEN.Tween(this.player.rotation)
+                   .to({ z: 0.3 }, 200)
+                   .yoyo(true)
+                   .repeat(1)
+                   .start();
+            }
             
             celebratePlatform(floorIndex) {
                 const platform = this.platforms[floorIndex];
@@ -880,6 +906,7 @@
             }
             
             async playerGuess(choice) {
+                if(this.phase === 'locked') return; // Prevent double clicks
                 this.setPhase('locked');
                 await this.revealNextCard();
                 
@@ -944,10 +971,17 @@
             }
             
             handleLoss() {
-                this.showMessage("TRY AGAIN!", true);
+                this.showMessage("OOPS!", true);
                 this.streak = 0;
                 this.updateUI();
-                this.setPhase('gameover');
+                
+                // 1. Trigger the fail animation
+                this.engine.playerFailJump();
+                
+                // 2. Wait for animation to finish, then automatically reset for the same floor
+                setTimeout(() => {
+                    this.continueGame(); // Auto-continue
+                }, 1200);
             }
             
             setupNextRound() {
@@ -958,6 +992,7 @@
             }
             
             continueGame() {
+                // Reset card logic for current floor
                 this.nextCard = this.drawCard();
                 this.updateCardUI();
                 this.setPhase('guess');
@@ -999,8 +1034,15 @@
             }
             
             setPhase(phase) {
-                document.getElementById('controls-guess').classList.toggle('hidden', phase !== 'guess');
-                document.getElementById('controls-reset').classList.toggle('hidden', phase !== 'gameover');
+                this.phase = phase;
+                const controls = document.getElementById('controls-guess');
+                if(phase === 'guess') {
+                    controls.style.opacity = '1';
+                    controls.style.pointerEvents = 'auto';
+                } else {
+                    controls.style.opacity = '0.5';
+                    controls.style.pointerEvents = 'none';
+                }
             }
         }
 
@@ -1012,7 +1054,6 @@
 
         document.getElementById('btn-higher').addEventListener('click', () => game.playerGuess('higher'));
         document.getElementById('btn-lower').addEventListener('click', () => game.playerGuess('lower'));
-        document.getElementById('btn-reset').addEventListener('click', () => game.continueGame());
     </script>
 </body>
 </html>
