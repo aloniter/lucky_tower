@@ -315,6 +315,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
 </head>
 <body>
+    
+    <!-- Audio Asset -->
+    <audio id="sfx-jump" src="jump.mp3" preload="auto"></audio>
 
     <canvas id="bg-canvas"></canvas>
     <div id="canvas-container"></div>
@@ -646,6 +649,9 @@
                 this.gltfLoader = new THREE.GLTFLoader();
                 this.bgRenderer = new BackgroundRenderer();
 
+                // Sound Effect
+                this.jumpSound = document.getElementById('sfx-jump');
+
                 window.addEventListener('resize', () => this.onResize());
                 this.clock = new THREE.Clock();
                 this.animate();
@@ -783,6 +789,12 @@
             }
             
             playerJumpTo(floorIndex) {
+                // Play Jump Sound
+                if(this.jumpSound) {
+                    this.jumpSound.currentTime = 0;
+                    this.jumpSound.play().catch(e => console.log('Audio play blocked', e));
+                }
+
                 const endY = floorIndex * SETTINGS.floorHeight + SETTINGS.platformTopOffset;
                 const startY = this.player.position.y;
                 const peakY = Math.max(startY, endY) + 2;
