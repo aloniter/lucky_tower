@@ -110,8 +110,15 @@
             background-size: 100% 100%, 12px 12px;
             background-blend-mode: normal, overlay;
             border: 2px solid rgba(255,255,255,0.2);
+            text-align: center;
         }
         
+        .card-sticker {
+            font-size: 3rem;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
         .card-rank { font-size: 1.6rem; font-weight: 800; line-height: 1; z-index: 2; }
         .card-suit { font-size: 1.6rem; z-index: 2; }
         .card-rank-bottom { font-size: 1.6rem; font-weight: 800; align-self: flex-end; transform: rotate(180deg); z-index: 2; }
@@ -233,6 +240,22 @@
         }
         .btn-lower:active { transform: translateY(4px); box-shadow: 0 2px 0 #b91c1c; }
 
+        .btn-reroll {
+            background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            box-shadow: 0 6px 0 #b45309, 0 12px 20px rgba(217, 119, 6, 0.4);
+            border-radius: 20px;
+            width: 60px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-reroll:active { transform: translateY(4px); box-shadow: 0 2px 0 #b45309; }
+
         .btn-store {
             background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%);
             color: white;
@@ -278,7 +301,7 @@
         }
 
         /* === MODAL STYLES === */
-        #store-modal {
+        #store-modal, #sticker-modal {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6);
@@ -291,7 +314,7 @@
             opacity: 0;
             transition: opacity 0.3s;
         }
-        #store-modal.open { display: flex; opacity: 1; }
+        #store-modal.open, #sticker-modal.open { display: flex; opacity: 1; }
 
         .modal-content {
             background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -303,8 +326,10 @@
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             transform: scale(0.9);
             transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-height: 90vh;
+            overflow-y: auto;
         }
-        #store-modal.open .modal-content { transform: scale(1); }
+        #store-modal.open .modal-content, #sticker-modal.open .modal-content { transform: scale(1); }
 
         .store-item {
             background: rgba(255,255,255,0.05);
@@ -316,7 +341,7 @@
             margin-bottom: 12px;
             border: 1px solid rgba(255,255,255,0.05);
         }
-        .store-icon { font-size: 2rem; margin-right: 12px; }
+        .store-icon { font-size: 2rem; margin-right: 12px; display: flex; align-items: center; justify-content: center; width: 40px;}
         .buy-btn {
             background: #fbbf24;
             color: #78350f;
@@ -326,9 +351,20 @@
             font-weight: 800;
             cursor: pointer;
             transition: transform 0.1s;
+            white-space: nowrap;
         }
         .buy-btn:active { transform: scale(0.95); }
         .buy-btn:disabled { opacity: 0.5; filter: grayscale(1); cursor: not-allowed; }
+
+        .sticker-reveal-content {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .sticker-big { font-size: 8rem; animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
 
         .card-panel {
             position: absolute;
@@ -375,6 +411,13 @@
         
         .safe-bottom { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
         .safe-top { padding-top: max(16px, env(safe-area-inset-top)); }
+        
+        .animate-shake { animation: shake 0.5s; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -401,7 +444,7 @@
                         </div>
                     </div>
 
-                    <!-- Coin & Shield Display -->
+                    <!-- Coin, Shield, Reroll Display -->
                     <div class="bg-glass p-3 rounded-2xl min-w-[100px] flex flex-col justify-center">
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-[10px] text-gray-300 uppercase tracking-widest font-semibold">Coins</span>
@@ -410,8 +453,9 @@
                             <span>🪙</span> <span id="coin-display">0</span>
                         </div>
                         <div class="w-full h-[1px] bg-white/10 my-1"></div>
-                        <div class="flex items-center gap-2">
-                             <span class="text-xl">🛡️</span> <span id="shield-display" class="font-bold text-white">0</span>
+                        <div class="flex items-center justify-between text-xs font-bold text-gray-300">
+                            <div class="flex items-center gap-1"><span class="text-lg">🛡️</span> <span id="shield-display" class="text-white">0</span></div>
+                            <div class="flex items-center gap-1"><span class="text-lg">🎲</span> <span id="reroll-display" class="text-white">0</span></div>
                         </div>
                     </div>
                 </div>
@@ -465,6 +509,11 @@
                     <button id="btn-higher" class="btn-game btn-higher">
                         <span>▲</span><span>HIGHER</span>
                     </button>
+                    
+                    <button id="btn-reroll-action" onclick="game.useReroll()" class="btn-reroll hidden">
+                        🎲
+                    </button>
+
                     <button id="btn-lower" class="btn-game btn-lower">
                         <span>▼</span><span>LOWER</span>
                     </button>
@@ -500,20 +549,42 @@
                     10 🪙
                 </button>
             </div>
-            
-            <!-- Placeholder for more items -->
-            <div class="store-item opacity-50">
+
+            <div class="store-item">
                 <div class="flex items-center">
-                    <div class="store-icon">💎</div>
+                    <div class="store-icon">🎲</div>
                     <div>
-                        <div class="text-white font-bold">Multiplier</div>
-                        <div class="text-gray-400 text-xs">Coming Soon</div>
+                        <div class="text-white font-bold">Extra Rolls</div>
+                        <div class="text-gray-400 text-xs">Shuffle your cards</div>
                     </div>
                 </div>
-                <button disabled class="buy-btn bg-gray-600 text-gray-400 cursor-not-allowed">
-                    ---
+                <button onclick="game.buyItem('reroll')" class="buy-btn" id="btn-buy-reroll">
+                    20 🪙
                 </button>
             </div>
+            
+            <div class="store-item">
+                <div class="flex items-center">
+                    <div class="store-icon">🎁</div>
+                    <div>
+                        <div class="text-white font-bold">Sticker Pack</div>
+                        <div class="text-gray-400 text-xs">Unlock a random sticker!</div>
+                    </div>
+                </div>
+                <button onclick="game.buyItem('sticker_pack')" class="buy-btn" id="btn-buy-sticker">
+                    50 🪙
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STICKER REVEAL MODAL -->
+    <div id="sticker-modal" class="interactive">
+        <div class="modal-content sticker-reveal-content">
+            <h2 class="text-2xl font-black text-white italic">NEW STICKER!</h2>
+            <div id="new-sticker-display" class="sticker-big">🦄</div>
+            <div class="text-gray-300 text-sm">Equipped to your card back!</div>
+            <button onclick="game.closeStickerModal()" class="btn-game btn-higher w-full">AWESOME!</button>
         </div>
     </div>
 
@@ -994,6 +1065,15 @@
                 const savedShields = localStorage.getItem('hlt_shields');
                 this.shields = savedShields ? parseInt(savedShields) : 0;
 
+                const savedRerolls = localStorage.getItem('hlt_rerolls');
+                this.rerolls = savedRerolls ? parseInt(savedRerolls) : 0;
+
+                const savedSticker = localStorage.getItem('hlt_sticker_equipped');
+                this.equippedSticker = savedSticker || null;
+
+                // Available stickers
+                this.stickerList = ["🐯", "🦄", "🐲", "👽", "👻", "🤖", "🍕", "🎱", "🚀", "💎", "🐸", "🎃"];
+
                 this.init();
             }
             
@@ -1049,6 +1129,20 @@
                 this.showCardResult(won);
                 setTimeout(() => won ? this.handleWin() : this.checkShield(), won ? 400 : 600);
             }
+
+            useReroll() {
+                if (this.rerolls > 0) {
+                    this.rerolls--;
+                    this.saveData();
+                    this.updateUI();
+                    this.spawnParticles();
+                    
+                    // Logic: Get new cards without penalty
+                    this.currentCard = this.drawCard();
+                    this.nextCard = this.drawCard();
+                    this.updateCardUI();
+                }
+            }
             
             checkShield() {
                 if (this.shields > 0) {
@@ -1076,7 +1170,7 @@
                     // Reset card visuals without moving player
                     const nEl = document.getElementById('ui-card-next');
                     nEl.className = 'card-ui back';
-                    nEl.innerHTML = '<div class="card-glare"></div>?';
+                    nEl.innerHTML = this.getBackCardHTML();
                     nEl.style.transform = '';
                     nEl.style.boxShadow = '';
                     nEl.style.border = '';
@@ -1161,6 +1255,8 @@
             saveData() {
                 localStorage.setItem('hlt_coins', this.coins);
                 localStorage.setItem('hlt_shields', this.shields);
+                localStorage.setItem('hlt_rerolls', this.rerolls);
+                localStorage.setItem('hlt_sticker_equipped', this.equippedSticker || '');
             }
 
             showCoinPopup(amount) {
@@ -1191,6 +1287,11 @@
                 this.setPhase('guess');
             }
             
+            getBackCardHTML() {
+                const stickerHTML = this.equippedSticker ? `<div class="card-sticker">${this.equippedSticker}</div>` : '?';
+                return `<div class="card-glare"></div>${stickerHTML}`;
+            }
+
             updateCardUI() {
                 const c = this.currentCard;
                 const cEl = document.getElementById('ui-card-current');
@@ -1205,7 +1306,7 @@
                 
                 const nEl = document.getElementById('ui-card-next');
                 nEl.className = 'card-ui back';
-                nEl.innerHTML = '<div class="card-glare"></div>?';
+                nEl.innerHTML = this.getBackCardHTML();
                 nEl.style.transform = '';
                 nEl.style.border = '';
                 nEl.style.boxShadow = '';
@@ -1226,9 +1327,18 @@
                 document.getElementById('score-display').innerText = this.score;
                 document.getElementById('coin-display').innerText = this.coins;
                 document.getElementById('shield-display').innerText = this.shields;
+                document.getElementById('reroll-display').innerText = this.rerolls;
 
                 // Update store coin display too
                 document.getElementById('store-coin-display').innerText = this.coins;
+
+                // Toggle Reroll Button
+                const btnReroll = document.getElementById('btn-reroll-action');
+                if (this.rerolls > 0) {
+                    btnReroll.classList.remove('hidden');
+                } else {
+                    btnReroll.classList.add('hidden');
+                }
 
                 const streakEl = document.getElementById('streak-display');
                 if (this.streak > 1) {
@@ -1262,36 +1372,63 @@
             }
             
             buyItem(item) {
-                if (item === 'shield') {
-                    const price = 10;
-                    if (this.coins >= price) {
-                        this.coins -= price;
-                        this.shields++;
-                        this.saveData();
-                        this.updateUI();
-                        // Optional visual feedback for purchase
-                        const btn = document.getElementById('btn-buy-shield');
-                        const originalText = btn.innerText;
-                        btn.innerText = "BOUGHT!";
-                        btn.style.background = "#22c55e";
-                        btn.style.color = "white";
-                        setTimeout(() => {
-                            btn.innerText = originalText;
-                            btn.style.background = "#fbbf24";
-                            btn.style.color = "#78350f";
-                        }, 800);
-                    } else {
-                        // Not enough money
-                        const btn = document.getElementById('btn-buy-shield');
-                        btn.classList.add('animate-shake'); // could add a shake anim
-                        btn.style.background = "#ef4444";
-                        btn.style.color = "white";
-                        setTimeout(() => {
-                            btn.style.background = "#fbbf24";
-                            btn.style.color = "#78350f";
-                        }, 500);
+                let price = 0;
+                let btnId = '';
+                
+                if (item === 'shield') { price = 10; btnId = 'btn-buy-shield'; }
+                if (item === 'reroll') { price = 20; btnId = 'btn-buy-reroll'; }
+                if (item === 'sticker_pack') { price = 50; btnId = 'btn-buy-sticker'; }
+
+                const btn = document.getElementById(btnId);
+
+                if (this.coins >= price) {
+                    this.coins -= price;
+
+                    if (item === 'shield') this.shields++;
+                    if (item === 'reroll') this.rerolls++;
+                    if (item === 'sticker_pack') {
+                        this.openStickerPack();
                     }
+
+                    this.saveData();
+                    this.updateUI();
+                    
+                    // Visual feedback
+                    const originalText = btn.innerText;
+                    btn.innerText = "BOUGHT!";
+                    btn.style.background = "#22c55e";
+                    btn.style.color = "white";
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.style.background = "#fbbf24";
+                        btn.style.color = "#78350f";
+                    }, 800);
+                } else {
+                    // Not enough money
+                    btn.classList.add('animate-shake'); 
+                    btn.style.background = "#ef4444";
+                    btn.style.color = "white";
+                    setTimeout(() => {
+                        btn.classList.remove('animate-shake');
+                        btn.style.background = "#fbbf24";
+                        btn.style.color = "#78350f";
+                    }, 500);
                 }
+            }
+
+            openStickerPack() {
+                // Randomly select a sticker
+                const randomSticker = this.stickerList[Math.floor(Math.random() * this.stickerList.length)];
+                this.equippedSticker = randomSticker;
+                this.saveData();
+                this.updateCardUI(); // Apply to card back immediately
+                
+                document.getElementById('new-sticker-display').innerText = randomSticker;
+                document.getElementById('sticker-modal').classList.add('open');
+            }
+
+            closeStickerModal() {
+                document.getElementById('sticker-modal').classList.remove('open');
             }
         }
 
