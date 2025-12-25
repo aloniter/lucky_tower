@@ -47,26 +47,25 @@
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            perspective: 1000px; /* Essential for 3D card tilt */
+            perspective: 1000px;
         }
         
         .interactive { pointer-events: auto; }
 
-        /* === NEW CARD STYLES === */
+        /* === CARD STYLES === */
         .card-wrapper {
             position: relative;
-            width: 100px; /* Slightly larger */
+            width: 100px;
             height: 140px;
             perspective: 1000px;
             animation: float 4s ease-in-out infinite;
         }
         
-        /* Floating animation for idle state */
         @keyframes float {
             0%, 100% { transform: translateY(0px); }
             50% { transform: translateY(-10px); }
         }
-        .card-wrapper.delay { animation-delay: 2s; } /* Offset the two cards */
+        .card-wrapper.delay { animation-delay: 2s; }
 
         .card-ui {
             width: 100%;
@@ -81,13 +80,12 @@
             justify-content: space-between;
             padding: 12px;
             font-weight: bold;
-            transition: transform 0.1s ease-out, box-shadow 0.3s ease; /* Fast transform for tilt */
+            transition: transform 0.1s ease-out, box-shadow 0.3s ease;
             position: relative;
             overflow: hidden;
             transform-style: preserve-3d;
         }
         
-        /* Inner decorative ring/border */
         .card-ui::after {
             content: '';
             position: absolute;
@@ -100,14 +98,12 @@
         .card-ui.red { color: #e11d48; }
         .card-ui.black { color: #1e293b; }
         
-        /* Card Back - improved gradient and pattern */
         .card-ui.back { 
             background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
             align-items: center;
             justify-content: center;
             color: white;
             font-size: 3rem;
-            /* Subtle Pattern */
             background-image: 
                 linear-gradient(135deg, #6366f1 0%, #4338ca 100%),
                 radial-gradient(#ffffff 15%, transparent 16%);
@@ -120,7 +116,6 @@
         .card-suit { font-size: 1.6rem; z-index: 2; }
         .card-rank-bottom { font-size: 1.6rem; font-weight: 800; align-self: flex-end; transform: rotate(180deg); z-index: 2; }
         
-        /* Large Watermark Suit in background */
         .card-watermark {
             position: absolute;
             top: 50%;
@@ -132,7 +127,6 @@
             z-index: 1;
         }
 
-        /* Glare Effect */
         .card-glare {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -156,18 +150,10 @@
             100% { transform: rotateY(0) scale(1); }
         }
         
-        .card-glow-win { 
-            box-shadow: 0 0 40px rgba(34, 197, 94, 0.6) !important; 
-            border: 2px solid #4ade80;
-        }
-        .card-glow-lose { 
-            box-shadow: 0 0 40px rgba(239, 68, 68, 0.6) !important; 
-            border: 2px solid #f87171;
-        }
+        .card-glow-win { box-shadow: 0 0 40px rgba(34, 197, 94, 0.6) !important; border: 2px solid #4ade80; }
+        .card-glow-lose { box-shadow: 0 0 40px rgba(239, 68, 68, 0.6) !important; border: 2px solid #f87171; }
         
-
-        
-        
+        /* UI Components */
         .bg-glass {
             background: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(12px);
@@ -181,6 +167,9 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
+        .coin-text { color: #fbbf24; text-shadow: 0 2px 0 rgba(0,0,0,0.3); }
+        .shield-text { color: #60a5fa; text-shadow: 0 2px 0 rgba(0,0,0,0.3); }
         
         .progress-track {
             height: 6px;
@@ -213,7 +202,6 @@
             position: relative;
             overflow: hidden;
         }
-        /* Button shine effect */
         .btn-game::after {
             content: '';
             position: absolute;
@@ -244,6 +232,18 @@
             box-shadow: 0 6px 0 #b91c1c, 0 12px 20px rgba(220, 38, 38, 0.4);
         }
         .btn-lower:active { transform: translateY(4px); box-shadow: 0 2px 0 #b91c1c; }
+
+        .btn-store {
+            background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            box-shadow: 0 4px 0 #6d28d9, 0 8px 12px rgba(124, 58, 237, 0.4);
+            border-radius: 12px;
+            padding: 8px 16px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all 0.1s;
+        }
+        .btn-store:active { transform: translateY(2px); box-shadow: 0 2px 0 #6d28d9; }
         
         #game-message {
             font-family: 'Black Ops One', cursive;
@@ -260,7 +260,76 @@
             0% { transform: translate(0, 0) scale(1); opacity: 1; }
             100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
         }
-        
+
+        .coin-popup {
+            position: absolute;
+            font-family: 'Black Ops One', cursive;
+            color: #fbbf24;
+            font-size: 2rem;
+            pointer-events: none;
+            z-index: 50;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            animation: coinFloat 1s ease-out forwards;
+        }
+        @keyframes coinFloat {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+            100% { transform: translateY(-60px) scale(1); opacity: 0; }
+        }
+
+        /* === MODAL STYLES === */
+        #store-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none; /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #store-modal.open { display: flex; opacity: 1; }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #store-modal.open .modal-content { transform: scale(1); }
+
+        .store-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .store-icon { font-size: 2rem; margin-right: 12px; }
+        .buy-btn {
+            background: #fbbf24;
+            color: #78350f;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .buy-btn:active { transform: scale(0.95); }
+        .buy-btn:disabled { opacity: 0.5; filter: grayscale(1); cursor: not-allowed; }
+
         .card-panel {
             position: absolute;
             top: 50%;
@@ -286,8 +355,6 @@
             border-radius: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        
-        @keyframes pulse { 0% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.1); } 100% { transform: translate(-50%, -50%) scale(1); } }
         
         @media (max-width: 480px) {
             .card-wrapper { width: 85px; height: 120px; }
@@ -324,12 +391,34 @@
 
     <div id="ui-layer">
         <div class="flex justify-between items-start p-4 safe-top interactive">
-            <div class="bg-glass p-3 rounded-2xl min-w-[100px]">
-                <div class="text-[10px] text-gray-300 uppercase tracking-widest font-semibold">Floor</div>
-                <div class="text-4xl font-extrabold floor-badge" id="floor-display">1</div>
-                <div class="progress-track mt-2">
-                    <div class="progress-fill" id="floor-progress" style="width: 10%"></div>
+            <div class="flex flex-col gap-2">
+                <div class="flex gap-2">
+                    <div class="bg-glass p-3 rounded-2xl min-w-[100px]">
+                        <div class="text-[10px] text-gray-300 uppercase tracking-widest font-semibold">Floor</div>
+                        <div class="text-4xl font-extrabold floor-badge" id="floor-display">1</div>
+                        <div class="progress-track mt-2">
+                            <div class="progress-fill" id="floor-progress" style="width: 10%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Coin & Shield Display -->
+                    <div class="bg-glass p-3 rounded-2xl min-w-[100px] flex flex-col justify-center">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] text-gray-300 uppercase tracking-widest font-semibold">Coins</span>
+                        </div>
+                        <div class="text-xl font-extrabold coin-text flex items-center gap-1">
+                            <span>🪙</span> <span id="coin-display">0</span>
+                        </div>
+                        <div class="w-full h-[1px] bg-white/10 my-1"></div>
+                        <div class="flex items-center gap-2">
+                             <span class="text-xl">🛡️</span> <span id="shield-display" class="font-bold text-white">0</span>
+                        </div>
+                    </div>
                 </div>
+                
+                <button onclick="game.openStore()" class="btn-store flex items-center gap-2 w-fit">
+                    <span>🛒</span> STORE
+                </button>
             </div>
             
             <div class="bg-glass p-3 rounded-2xl text-right min-w-[120px]">
@@ -384,6 +473,50 @@
         </div>
     </div>
     
+    <!-- STORE MODAL -->
+    <div id="store-modal" class="interactive">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black text-white italic tracking-wider">ITEM SHOP</h2>
+                <button onclick="game.closeStore()" class="text-gray-400 hover:text-white text-xl font-bold">✕</button>
+            </div>
+            
+            <div class="flex items-center justify-between mb-6 bg-white/5 p-3 rounded-xl border border-white/10">
+                <span class="text-gray-300 text-sm font-bold">YOUR BALANCE</span>
+                <span class="text-yellow-400 font-black text-xl flex items-center gap-2">
+                    <span id="store-coin-display">0</span> 🪙
+                </span>
+            </div>
+
+            <div class="store-item">
+                <div class="flex items-center">
+                    <div class="store-icon">🛡️</div>
+                    <div>
+                        <div class="text-white font-bold">Safety Shield</div>
+                        <div class="text-gray-400 text-xs">Protects from 1 fall</div>
+                    </div>
+                </div>
+                <button onclick="game.buyItem('shield')" class="buy-btn" id="btn-buy-shield">
+                    10 🪙
+                </button>
+            </div>
+            
+            <!-- Placeholder for more items -->
+            <div class="store-item opacity-50">
+                <div class="flex items-center">
+                    <div class="store-icon">💎</div>
+                    <div>
+                        <div class="text-white font-bold">Multiplier</div>
+                        <div class="text-gray-400 text-xs">Coming Soon</div>
+                    </div>
+                </div>
+                <button disabled class="buy-btn bg-gray-600 text-gray-400 cursor-not-allowed">
+                    ---
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="particles" style="position: fixed; inset: 0; pointer-events: none; z-index: 100;"></div>
 
     <script>
@@ -402,27 +535,21 @@
                 const glare = card.querySelector('.card-glare');
                 const rect = wrapper.getBoundingClientRect();
                 
-                // Check if mouse is near this card (within 200px)
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
                 const dist = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
                 
                 if (dist < 300) {
-                    // Calculate rotation
-                    const rotateY = ((x - centerX) / (rect.width * 2)) * 30; // Max 30deg
+                    const rotateY = ((x - centerX) / (rect.width * 2)) * 30; 
                     const rotateX = ((y - centerY) / (rect.height * 2)) * -30;
-                    
-                    // Apply rotation
                     card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
                     
-                    // Move glare
                     const glareX = ((x - rect.left) / rect.width) * 100;
                     const glareY = ((y - rect.top) / rect.height) * 100;
                     glare.style.setProperty('--mouse-x', `${glareX}%`);
                     glare.style.setProperty('--mouse-y', `${glareY}%`);
                     glare.style.opacity = '1';
                 } else {
-                    // Reset if far away
                     card.style.transform = `rotateX(0) rotateY(0) scale(1)`;
                     glare.style.opacity = '0';
                 }
@@ -859,6 +986,14 @@
                 this.floor = 1;
                 this.score = 0;
                 this.streak = 0;
+                
+                // Inventory
+                const savedCoins = localStorage.getItem('hlt_coins');
+                this.coins = savedCoins ? parseInt(savedCoins) : 0;
+                
+                const savedShields = localStorage.getItem('hlt_shields');
+                this.shields = savedShields ? parseInt(savedShields) : 0;
+
                 this.init();
             }
             
@@ -912,9 +1047,44 @@
                             (choice === 'lower' && this.nextCard.value <= this.currentCard.value);
                 
                 this.showCardResult(won);
-                setTimeout(() => won ? this.handleWin() : this.handleLoss(), won ? 400 : 600);
+                setTimeout(() => won ? this.handleWin() : this.checkShield(), won ? 400 : 600);
             }
             
+            checkShield() {
+                if (this.shields > 0) {
+                    this.useShield();
+                } else {
+                    this.handleLoss();
+                }
+            }
+
+            useShield() {
+                this.shields--;
+                this.saveData();
+                this.showMessage("SHIELD SAVED YOU!", false); // Green message
+                
+                // Visual feedback
+                const el = document.getElementById('ui-card-next');
+                el.style.border = "4px solid #60a5fa";
+                el.style.boxShadow = "0 0 30px #3b82f6";
+                
+                setTimeout(() => {
+                    this.updateUI();
+                    // Mechanic: Shield breaks, stay on current floor, new next card
+                    this.nextCard = this.drawCard(); // New target
+                    
+                    // Reset card visuals without moving player
+                    const nEl = document.getElementById('ui-card-next');
+                    nEl.className = 'card-ui back';
+                    nEl.innerHTML = '<div class="card-glare"></div>?';
+                    nEl.style.transform = '';
+                    nEl.style.boxShadow = '';
+                    nEl.style.border = '';
+
+                    this.setPhase('guess');
+                }, 1000);
+            }
+
             revealNextCard() {
                 return new Promise(resolve => {
                     const el = document.getElementById('ui-card-next');
@@ -929,7 +1099,6 @@
                             <div class="card-suit">${n.suitIcon}</div>
                             <div class="card-rank-bottom">${n.rank}</div>
                         `;
-                        // Trigger slam effect via CSS class or just let the animation run
                         el.style.transform = 'rotateY(0) scale(1)';
                         setTimeout(resolve, 300);
                     }, 200);
@@ -963,6 +1132,14 @@
             handleWin() {
                 this.showMessage("CORRECT!", false);
                 this.streak++;
+                
+                const streakBonus = this.streak > 1 ? (this.streak - 1) : 0;
+                const coinsEarned = 1 + streakBonus;
+                
+                this.coins += coinsEarned;
+                this.saveData();
+                this.showCoinPopup(coinsEarned);
+
                 this.score += Math.floor(100 * this.floor * (1 + this.streak * 0.1));
                 this.floor++;
                 this.engine.playerJumpTo(this.floor - 1);
@@ -979,6 +1156,26 @@
                 this.updateUI();
                 this.engine.playerFailJump();
                 setTimeout(() => { this.continueGame(); }, 1200);
+            }
+            
+            saveData() {
+                localStorage.setItem('hlt_coins', this.coins);
+                localStorage.setItem('hlt_shields', this.shields);
+            }
+
+            showCoinPopup(amount) {
+                const container = document.getElementById('particles');
+                const popup = document.createElement('div');
+                popup.className = 'coin-popup';
+                popup.innerHTML = `+${amount} 🪙`;
+                
+                const coinDisplay = document.getElementById('coin-display');
+                const rect = coinDisplay.getBoundingClientRect();
+                popup.style.left = (rect.left - 20) + 'px';
+                popup.style.top = (rect.top + 20) + 'px';
+                
+                container.appendChild(popup);
+                setTimeout(() => popup.remove(), 1000);
             }
             
             setupNextRound() {
@@ -1010,6 +1207,8 @@
                 nEl.className = 'card-ui back';
                 nEl.innerHTML = '<div class="card-glare"></div>?';
                 nEl.style.transform = '';
+                nEl.style.border = '';
+                nEl.style.boxShadow = '';
             }
             
             showMessage(text, isBad) {
@@ -1025,6 +1224,12 @@
                 document.getElementById('floor-display').innerText = this.floor;
                 document.getElementById('floor-progress').style.width = ((this.floor - 1) % 10 + 1) * 10 + '%';
                 document.getElementById('score-display').innerText = this.score;
+                document.getElementById('coin-display').innerText = this.coins;
+                document.getElementById('shield-display').innerText = this.shields;
+
+                // Update store coin display too
+                document.getElementById('store-coin-display').innerText = this.coins;
+
                 const streakEl = document.getElementById('streak-display');
                 if (this.streak > 1) {
                     streakEl.style.opacity = '1';
@@ -1043,6 +1248,49 @@
                 } else {
                     controls.style.opacity = '0.5';
                     controls.style.pointerEvents = 'none';
+                }
+            }
+
+            // STORE FUNCTIONS
+            openStore() {
+                this.updateUI(); // Refresh balance
+                document.getElementById('store-modal').classList.add('open');
+            }
+            
+            closeStore() {
+                document.getElementById('store-modal').classList.remove('open');
+            }
+            
+            buyItem(item) {
+                if (item === 'shield') {
+                    const price = 10;
+                    if (this.coins >= price) {
+                        this.coins -= price;
+                        this.shields++;
+                        this.saveData();
+                        this.updateUI();
+                        // Optional visual feedback for purchase
+                        const btn = document.getElementById('btn-buy-shield');
+                        const originalText = btn.innerText;
+                        btn.innerText = "BOUGHT!";
+                        btn.style.background = "#22c55e";
+                        btn.style.color = "white";
+                        setTimeout(() => {
+                            btn.innerText = originalText;
+                            btn.style.background = "#fbbf24";
+                            btn.style.color = "#78350f";
+                        }, 800);
+                    } else {
+                        // Not enough money
+                        const btn = document.getElementById('btn-buy-shield');
+                        btn.classList.add('animate-shake'); // could add a shake anim
+                        btn.style.background = "#ef4444";
+                        btn.style.color = "white";
+                        setTimeout(() => {
+                            btn.style.background = "#fbbf24";
+                            btn.style.color = "#78350f";
+                        }, 500);
+                    }
                 }
             }
         }
