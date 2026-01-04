@@ -866,7 +866,12 @@
         class GameEngine {
             constructor() {
                 this.scene = new THREE.Scene();
-                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+                // Adjust FOV for mobile devices to show more of the background
+                const isMobile = window.innerWidth <= 768;
+                const fov = isMobile ? 75 : 60; // Wider FOV on mobile
+
+                this.camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 1000);
                 this.camera.position.set(SETTINGS.cameraOffset.x, SETTINGS.cameraOffset.y, SETTINGS.cameraOffset.z);
                 this.camera.lookAt(0, SETTINGS.floorHeight / 2, 0);
 
@@ -900,6 +905,10 @@
             }
             
             onResize() {
+                // Update FOV based on screen size
+                const isMobile = window.innerWidth <= 768;
+                this.camera.fov = isMobile ? 75 : 60;
+
                 this.camera.aspect = window.innerWidth / window.innerHeight;
                 this.camera.updateProjectionMatrix();
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
