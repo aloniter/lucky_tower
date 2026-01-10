@@ -998,37 +998,57 @@
                 ctx.beginPath(); ctx.roundRect(64, 32, 128, 192, 60); ctx.fill();
                 ctx.fillStyle = '#111';
                 ctx.beginPath(); ctx.roundRect(74, 80, 45, 30, 10); ctx.roundRect(137, 80, 45, 30, 10); ctx.fill();
-                
+
                 const tex = new THREE.CanvasTexture(canvas);
                 const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
                 const geo = new THREE.PlaneGeometry(2.5, 2.5);
                 this.player = new THREE.Mesh(geo, mat);
-                this.player.position.set(-1.5, 1.5 + SETTINGS.platformTopOffset, SETTINGS.zIndex);
+                this.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex);
                 this.player.onBeforeRender = (r, s, cam) => this.player.quaternion.copy(cam.quaternion);
                 this.scene.add(this.player);
-                
-                try {
-                    this.gltfLoader.load('character.glb', (gltf) => {
+
+                console.log('Starting to load character.glb...');
+                this.gltfLoader.load(
+                    'character.glb',
+                    (gltf) => {
+                        console.log('Character.glb loaded successfully!', gltf);
                         this.scene.remove(this.player);
+
+                        // Get the initial size
                         gltf.scene.updateWorldMatrix(true, true);
                         const box = new THREE.Box3().setFromObject(gltf.scene);
                         const size = box.getSize(new THREE.Vector3());
-                        const scale = 2.5 / (size.y || 1);
+                        console.log('Original model size:', size);
+
+                        // Scale to desired height
+                        const targetHeight = 2.5;
+                        const scale = targetHeight / (size.y || 1);
                         gltf.scene.scale.set(scale, scale, scale);
-                        
+
+                        // Create wrapper and center the model
                         const wrapper = new THREE.Group();
                         wrapper.add(gltf.scene);
                         gltf.scene.updateWorldMatrix(true, true);
                         const newBox = new THREE.Box3().setFromObject(gltf.scene);
                         const center = newBox.getCenter(new THREE.Vector3());
                         gltf.scene.position.set(-center.x, -newBox.min.y, -center.z);
-                        
+
+                        // Set player reference and position
                         this.player = wrapper;
                         this.player.position.set(-1.5, SETTINGS.platformTopOffset, SETTINGS.zIndex);
                         this.player.rotation.y = SETTINGS.playerRotation;
                         this.scene.add(this.player);
-                    }, undefined, () => {});
-                } catch (e) {}
+                        console.log('Character model added to scene at position:', this.player.position);
+                    },
+                    (progress) => {
+                        const percent = progress.loaded / progress.total * 100;
+                        console.log('Loading character.glb:', percent.toFixed(2) + '%');
+                    },
+                    (error) => {
+                        console.error('Error loading character.glb:', error);
+                        console.log('Keeping placeholder character instead');
+                    }
+                );
             }
             
             moveCameraToFloor(floorIndex) {
